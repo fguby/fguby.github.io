@@ -1,0 +1,202 @@
+<?xml version="1.0"?>
+<rss version="2.0">
+    <channel>
+        <title>(๑•̀ㅂ•́)و✧</title>
+        <subtitle>人间情事一丢，就有了清澈的骨骼</subtitle>
+        <icon>http://yoursite.com/images/favicon.ico</icon>
+        <link>http://yoursite.com</link>
+        <author>
+          <name>我妻善逸</name>
+        </author>
+        <description>懒、宅、二次元、萝莉控</description>
+        <language>zh-CN</language>
+        <pubDate>Sun, 27 Dec 2020 01:29:25 +0800</pubDate>
+        <lastBuildDate>Sun, 27 Dec 2020 01:29:25 +0800</lastBuildDate>
+        <category term="关键词1" />
+        <category term="关键词2" />
+        <item>
+            <guid isPermalink="true">http://yoursite.com/Golang/</guid>
+            <title>Go Scheduler</title>
+            <link>http://yoursite.com/Golang/</link>
+            <category term="Golang" scheme="http://yoursite.com/categories/Golang/" />
+            <category term="Scheduler" scheme="http://yoursite.com/tags/Scheduler/" />
+            <pubDate>Sun, 27 Dec 2020 01:29:25 +0800</pubDate>
+            <description><![CDATA[ &lt;p&gt;对 Go 调度器的学习总结，涉及系统调度、Goroutine 模型&lt;br /&gt;
+&lt;a id=&#34;more&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&#34;os-scheduler&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#os-scheduler&#34;&gt;#&lt;/a&gt; OS Scheduler&lt;/h2&gt;
+&lt;p&gt;从操作系统角度看，程序最终都会转换成一系列的机器指令，机器只要按顺序执行完所有的指令就算完成了任务。&lt;/p&gt;
+&lt;p&gt;完成 “按顺序执行指令” 任务的实体就是线程，也就是说，线程是 CPU 调度的实体，是真正在 CPU 上执行指令的实体。&lt;/p&gt;
+&lt;h2 id=&#34;线程切换&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#线程切换&#34;&gt;#&lt;/a&gt; 线程切换&lt;/h2&gt;
+&lt;p&gt;OS Scheduler 调度线程的依据就是它的状态，线程的三种状态：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Waiting 等待状态，线程在等待某件事的发生，例如等待网络数据、硬盘；调用操作系统 API；等待内存同步访问条件 ready，如 atomic，mutexes&lt;/li&gt;
+&lt;li&gt;Runnable 就绪状态，只要给 CPU 资源就能运行&lt;/li&gt;
+&lt;li&gt;Executing 运行状态&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;什么是goroutine&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#什么是goroutine&#34;&gt;#&lt;/a&gt; 什么是 goroutine&lt;/h2&gt;
+&lt;p&gt;Goroutine 可以看作是对线程加的一层抽象，它更轻量级，可以单独执行，不是 OS 线程，也不是绿色线程（由语言的运行时管理的线程）。&lt;/p&gt;
+&lt;h2 id=&#34;goroutine和thread的区别&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#goroutine和thread的区别&#34;&gt;#&lt;/a&gt; goroutine 和 thread 的区别&lt;/h2&gt;
+&lt;p&gt;可以从三个角度区别：内存消耗、创建与销毁、切换&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;内存占用&lt;br /&gt;
+创建一个 goroutine 的栈内存消耗为 2KB，实际运行过程中，如果栈空间不够用，会自动进行扩容。&lt;br /&gt;
+创建一个 thread 则需要消耗 1MB 栈内存。&lt;/li&gt;
+&lt;li&gt;创建和销毁&lt;br /&gt;
+ Thread 创建和销毁都会有巨大的消耗，因为要和操作系统打交道，是内核级的，通常解决的办法就是线程池。而 goroutine 因为是由 Go runtime 负责管理的，创建和销毁的销毁非常小，是用户级。&lt;/li&gt;
+&lt;li&gt;切换&lt;br /&gt;
+线程切换的时候，需要保存各种寄存器，以便将来恢复，goroutine 的切换只需要保存三个寄存器：PC, SP, BP。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;mn模型&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#mn模型&#34;&gt;#&lt;/a&gt; M:N 模型&lt;/h2&gt;
+&lt;p&gt;Go runtime 会负责 Goroutine 的生老病死，从创建到销毁，都一手包办。&lt;/p&gt;
+&lt;p&gt;Runtime 会在程序启动的时候，创建 M 个线程（CPU 执行调度的单位），之后创建的 N 个 goroutine 都会依附在这 M 个线程上执行。&lt;/p&gt;
+&lt;p&gt;在同一时刻，一个线程上只能跑一个 goroutine，当 goroutine 发生阻塞时，runtime 会把当前的 goroutine 调度走，让其他 goroutine 来执行。&lt;/p&gt;
+&lt;h2 id=&#34;scheduler&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#scheduler&#34;&gt;#&lt;/a&gt; Scheduler&lt;/h2&gt;
+&lt;p&gt;Runtime 维护所有的 goroutines，并通过 scheduler 来进行调度。&lt;/p&gt;
+&lt;p&gt;有三个基础的结构体来实现 goroutines 的调度。&lt;/p&gt;
+&lt;p&gt;::G::：代表一个 goroutine&lt;br /&gt;
+::M::：表示内核线程，包含正在运行的 goroutine 等字段&lt;br /&gt;
+:😛::：代表 g 执行的上下文环境，它维护一个处于 Runable 状态的 G 队列，M 需要获得 P 才能运行 G。&lt;/p&gt;
+&lt;p&gt;&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*QaG177Xaz7hHBaJSxSDjBA.png&#34; alt=&#34;avatar&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;每个 Goroutine 在 OS 线程上（M）运行。&lt;/p&gt;
+&lt;p&gt;Runtime 在运行时会启动一些 G：垃圾回收的 G，执行调度的 G，运行用户代码的 G；并且会创建一个 M 用来开始 G 的运行，随着时间推移，更多的 G 会被创建出来，更多的 M 也会被创建出来。&lt;/p&gt;
+&lt;p&gt;GO Scheduler 的核心思想就是:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;reuse threads;（复用线程）&lt;/li&gt;
+&lt;li&gt;限制同时运行的线程数为 N，N 等于 CPU 的核心数目；（N 可以由 GOMAXPROCS 变量来决定）&lt;/li&gt;
+&lt;li&gt;线程私有的 runqueues，并且可以从其他线程 stealing goroutine 来运行，线程阻塞后，可以将 runqueues 传递给其他线程。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Go 程序启动后，会给每个逻辑核心分配一个 P，同时会给每个 P 分配一个 M，内核线程依然由 OS Scheduler 来调度。&lt;/p&gt;
+&lt;h2 id=&#34;具体流程&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#具体流程&#34;&gt;#&lt;/a&gt; 具体流程&lt;/h2&gt;
+&lt;p&gt;假设一段代码如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;func main() &amp;#123;
+   var wg sync.WaitGroup
+   wg.Add(2)
+
+   go func() &amp;#123;
+      println(`hello`)
+      wg.Done()
+   &amp;#125;()
+
+   go func() &amp;#123;
+      println(`world`)
+      wg.Done()
+   &amp;#125;()
+
+   wg.Wait()
+&amp;#125;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Go 首先会根据逻辑 CPU 核心数创建不同的 P，并且将这些 P 存储在一个空闲的 P 列表中。&lt;/p&gt;
+&lt;p&gt;&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*R8hPBHK-8aultosys9D8tQ.png&#34; alt=&#34;avatar&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;接下来，当有新的 Goroutine 或者是准备运行的 Goroutine 将唤醒 P 以更好地分配工作。&lt;/p&gt;
+&lt;p&gt;这个 P 将创建一个关联的 M（系统线程）：&lt;br /&gt;
+&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*CCguz8qrjngfk98HlTpcYA.png&#34; alt=&#34;1*CCguz8qrjngfk98HlTpcYA&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;当遇到以下情况时 P 又会重新回到上面的空闲列表中：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;没有 Goroutine 准备或是等待运行&lt;/li&gt;
+&lt;li&gt;从系统调用中返回&lt;/li&gt;
+&lt;li&gt;被垃圾收集器停止（也就是所谓的 STW，stop the world）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在程序的启动期间，Go 已经创建了一些 OS 线程和相关的 M。&lt;/p&gt;
+&lt;h3 id=&#34;系统调用&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#系统调用&#34;&gt;#&lt;/a&gt; 系统调用&lt;/h3&gt;
+&lt;p&gt;Go 通过将它们包装在 runtime 中来优化系统调用（无论是否阻塞），这个包装器将自动从线程 M 上分离出 P 并且允许另一个线程来运行它。&lt;br /&gt;
+以读取文件为例：&lt;/p&gt;
+&lt;figure class=&#34;highlight go&#34;&gt;&lt;figcaption data-lang=&#34;go&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;func&lt;/span&gt; main（）&lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt; &lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;   buf：&lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;token builtin&#34;&gt;make&lt;/span&gt;（&lt;span class=&#34;token punctuation&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;token builtin&#34;&gt;byte&lt;/span&gt;，&lt;span class=&#34;token number&#34;&gt;0&lt;/span&gt;，&lt;span class=&#34;token number&#34;&gt;2&lt;/span&gt;）&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;4&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;   fd，&lt;span class=&#34;token boolean&#34;&gt;_&lt;/span&gt;：&lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; os&lt;span class=&#34;token punctuation&#34;&gt;.&lt;/span&gt;Open（“number&lt;span class=&#34;token punctuation&#34;&gt;.&lt;/span&gt;txt”）&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;5&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;   fd&lt;span class=&#34;token punctuation&#34;&gt;.&lt;/span&gt;Read（buf）&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;6&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;   fd&lt;span class=&#34;token punctuation&#34;&gt;.&lt;/span&gt;Close（）&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;7&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;8&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;   &lt;span class=&#34;token builtin&#34;&gt;println&lt;/span&gt;（&lt;span class=&#34;token builtin&#34;&gt;string&lt;/span&gt;（buf&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;）&lt;span class=&#34;token comment&#34;&gt;// 42 &lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;9&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;以下是打开文件时的工作流程：&lt;/p&gt;
+&lt;p&gt;&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*l56efREv5Exm21lzNeKt_w.png&#34; alt=&#34;1*l56efREv5Exm21lzNeKt_w&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;当主协程中执行 os.Open () 函数时，线程 M0 进入阻塞状态，p0 回到空闲列表中并且处于可运行状态。&lt;/p&gt;
+&lt;p&gt;然后，当系统调用退出，Go 就会应用以下规则，直到可以满足：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;试图获得完全一样的 P，p0 在空闲列表中，可以继续执行&lt;/li&gt;
+&lt;li&gt;尝试在空闲列表中获取一个 p 执行&lt;/li&gt;
+&lt;li&gt;把 Goroutine 放到全局可运行队列中，并且将 M 放回空闲列表中&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;但是在非阻塞 IO（例如 http 调用）的情况下，Go 还可以处理资源尚未准备就绪的情况。在这种情况下，由于资源尚未准备就绪，Go 将使用网络轮询器将 Goroutine 停放。&lt;/p&gt;
+&lt;figure class=&#34;highlight go&#34;&gt;&lt;figcaption data-lang=&#34;go&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;func&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;main&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;		http&lt;span class=&#34;token punctuation&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;token function&#34;&gt;Get&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token string&#34;&gt;`https://httpstat.us/200`&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;一旦完成第一个系统调用并明确资源尚未准备就绪，goroutine 将驻留，直到网络轮询器通知，在这种情况下，线程 M 将不会被阻塞。&lt;/p&gt;
+&lt;p&gt;Go 调度程序查找后，线程 M 将会运行另外一个 Goroutine。&lt;/p&gt;
+&lt;p&gt;如果准备了多个 goroutine，则多余的 goroutine 将进入全局可运行队列，并在以后进行调度。&lt;/p&gt;
+&lt;h2 id=&#34;grq和lrq&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#grq和lrq&#34;&gt;#&lt;/a&gt; GRQ 和 LRQ&lt;/h2&gt;
+&lt;p&gt;全局可运行队列 (GRQ) 以及本地可运行队列 (LRQ)&lt;/p&gt;
+&lt;p&gt;LRQ 存储本地（也就是具体的 p）的可运行 goroutine， GRQ 存储全局的可运行 goroutine，这些 goroutine 还没有分配到具体的 p。&lt;/p&gt;
+&lt;h2 id=&#34;g0&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#g0&#34;&gt;#&lt;/a&gt; g0&lt;/h2&gt;
+&lt;p&gt;Go 使用::GOMAXPROCS:: 环境变量来限制同时运行的 OS 线程数，这意味着 Go 必须在每个运行的线程上调度和管理 Goroutine，该角色委托给了一个特殊的 Goroutine，也就是::g0::，这是为每个 OS 线程创建的第一个 Goroutine。&lt;/p&gt;
+&lt;p&gt;&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*NK13K84tQhVx8DCPSXNG_g.png&#34; alt=&#34;1*NK13K84tQhVx8DCPSXNG_g&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;随后，g0 将安排就绪的 Goroutine 在线程上运行。&lt;/p&gt;
+&lt;h3 id=&#34;g0的职责&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#g0的职责&#34;&gt;#&lt;/a&gt; g0 的职责&lt;/h3&gt;
+&lt;p&gt;和普通的 Goroutine 相反，g0 具有确定的和更大的堆栈。&lt;br /&gt;
+它的职责包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Goroutine 创建，使用 go 关键字的时候，Go 会将函数创建委托到 g0，然后将创建的 Goroutine 放置到本地队列中&lt;/li&gt;
+&lt;li&gt;延迟功能分配&lt;/li&gt;
+&lt;li&gt;垃圾收集器操作，例如 STW，扫描 goroutine 的堆栈以及一些标记和清除操作&lt;/li&gt;
+&lt;li&gt;堆栈增长，在需要时，Go 会增加 goroutine 的大小，该操作也会通过 g0 来完成&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这种特殊的 goroutine 还涉及到许多其他操作（大分配，cgo 等）。&lt;/p&gt;
+&lt;h2 id=&#34;goroutine调度代价&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#goroutine调度代价&#34;&gt;#&lt;/a&gt; goroutine 调度代价&lt;/h2&gt;
+&lt;p&gt;在 Go 中，一个 goroutine 的切换确实很轻量级，为了保存 goroutine，它只需要完成两件事：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;goroutine 在未调度之前停止的行，也就是保存当前要运行的行到 PC 寄存器中，稍后 goroutine 将在相同的地方恢复运行。&lt;/li&gt;
+&lt;li&gt;goroutine 的堆栈，以便在再次运行时还原局部变量。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;假设有一段这样的代码：&lt;br /&gt;
+&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*TZobNBH4mKyaN8B_ru7tUA.png&#34; alt=&#34;1*TZobNBH4mKyaN8B_ru7tUA&#34; /&gt;&lt;br /&gt;
+ 消费者会打印从 0 到 99 的偶数。&lt;/p&gt;
+&lt;p&gt;首先，关注一下第一个 goroutine（生产者），它将数字添加到 channel 的缓冲区中，当缓冲区被填满，当它再次发送数据时将会被阻塞。这个时候，Go 将会切换到 g0 并且调度另外一个 goroutine。&lt;/p&gt;
+&lt;p&gt;Go 首先需要保存当前指令，以便在同一条指令中恢复 goroutine，PC 保存在 goroutine 的内部结构中，示例图如下。&lt;/p&gt;
+&lt;p&gt;&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*ArVyzi31WBefg4RhhX5Pdw.png&#34; alt=&#34;1*ArVyzi31WBefg4RhhX5Pdw&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;指令以及地址可以使用以下命令查找:&lt;/p&gt;
+&lt;figure class=&#34;highlight shell&#34;&gt;&lt;figcaption data-lang=&#34;Bash&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;go tool objdump&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;&lt;img data-src=&#34;http://www.midoriya.co/uPic/9888D7A2-E02B-4A9C-8897-A81A760F7247.png&#34; alt=&#34;9888D7A2-E02B-4A9C-8897-A81A760F7247&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*E9HFNIw4ZhDirUh4dgWbsw.png&#34; alt=&#34;1*E9HFNIw4ZhDirUh4dgWbsw&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;在通道阻塞之前（runtime.chansend1），程序逐步执行指令，Go 保存当前的 PC 寄存器为当前 goroutine 的一个内部属性.&lt;br /&gt;
+ 在上图的例子中，Go 通过内存地址 &lt;code&gt;0x4268d0&lt;/code&gt;  保存 PC 寄存器，它在 runtime 和函数 runtime.chansend1 的内部。&lt;/p&gt;
+&lt;p&gt;&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*i1SaUH3K7pjijTtW-O1TKw.png&#34; alt=&#34;1*i1SaUH3K7pjijTtW-O1TKw&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;接下来，当 g0 唤醒 goroutine，它将恢复到相同的指令处，执行循环，将值传入通道。&lt;/p&gt;
+&lt;h2 id=&#34;goroutine调度期间的堆栈管理&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#goroutine调度期间的堆栈管理&#34;&gt;#&lt;/a&gt; goroutine 调度期间的堆栈管理&lt;/h2&gt;
+&lt;p&gt;在被阻塞之前，正在运行的 goroutine 具有原来的堆栈，这个堆栈包含临时的内存，例如变量 &lt;code&gt;i&lt;/code&gt; ：&lt;/p&gt;
+&lt;p&gt;&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*8oa7ziZBpHZqKVihpQ3b8g.png&#34; alt=&#34;1*8oa7ziZBpHZqKVihpQ3b8g&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;然后，当它在 channel 上被阻塞的时候，goroutine 以及堆栈都将被切换成 g0 以及 g0 的堆栈，一个更大的堆栈，如图。&lt;/p&gt;
+&lt;p&gt;&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*I42dKDU2BV6kTwWMWiA1JQ.png&#34; alt=&#34;1*I42dKDU2BV6kTwWMWiA1JQ&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;在切换之前，这个堆栈将被保存起来用以 goroutine 再次运行时恢复。&lt;br /&gt;
+&lt;img data-src=&#34;http://www.midoriya.co/uPic/1*kmufEth8mfd7OLnkl9oC7Q.png&#34; alt=&#34;1*kmufEth8mfd7OLnkl9oC7Q&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;需要注意的是，一些架构例如 arm，需要保存更多的寄存器：LR（连接寄存器）。&lt;/p&gt;
+&lt;h2 id=&#34;goroutine切换总结&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#goroutine切换总结&#34;&gt;#&lt;/a&gt; goroutine 切换总结&lt;/h2&gt;
+&lt;p&gt;以上图中的 channel 为例：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;当 goroutine 在 channel 上阻塞并且切换到了 g0
+&lt;ol&gt;
+&lt;li&gt;PC 寄存器与堆栈指针一起保存到内部结构中&lt;/li&gt;
+&lt;li&gt;g0 被设置为运行协程&lt;/li&gt;
+&lt;li&gt;g0 的堆栈替换当前堆栈&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;g0 正在寻找新的 goroutine 运行&lt;/li&gt;
+&lt;li&gt;g0 必须使用选定的 goroutine 进行切换：
+&lt;ol&gt;
+&lt;li&gt;从内部结构中提取出 PC 寄存器和堆栈指针&lt;/li&gt;
+&lt;li&gt;程序跳转到从 PC 中提取出来的地址&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;goroutine调度时机&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#goroutine调度时机&#34;&gt;#&lt;/a&gt; goroutine 调度时机&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;使用关键字 go&lt;br /&gt;
+ 创建一个新的 goroutine，Go Scheduler 会考虑调度。&lt;br /&gt;
+:: 新创建的 Goroutine 优先运行，并放置在 LRQ 的顶部::&lt;/li&gt;
+&lt;li&gt;GC&lt;br /&gt;
+ 由于进行 GC 的 goroutine 也需要在 M 上运行，因此肯定会发生调度。&lt;/li&gt;
+&lt;li&gt;系统调用&lt;br /&gt;
+当 goroutine 进行系统调用时，会阻塞 M，所以它会被调度走，同时一个新的 goroutine 会被调度上来&lt;/li&gt;
+&lt;li&gt;内存同步访问&lt;br /&gt;
+ atomic，mutex，channel 操作等会使 goroutine 阻塞，因此会被调度走。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;此外，需要注意，在调度期间，LRQ（本地队列）具有优先级。&lt;/p&gt;
+&lt;h2 id=&#34;work-stealing&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#work-stealing&#34;&gt;#&lt;/a&gt; work stealing&lt;/h2&gt;
+&lt;p&gt;Go Scheduler 的职责就是将所有处于 Runnable 的 goroutines 均匀分布到在 p 上运行的 M。&lt;/p&gt;
+&lt;p&gt;当 P 的 LRQ 里没有 goroutine 时，它会先去全局队列里（GRQ）和网络轮询器中查看，如果这两者都为空，它将从其他 P 那里窃取 goroutine。&lt;/p&gt;
+&lt;p&gt;TODO&lt;/p&gt;
+&lt;h2 id=&#34;参考文章&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#参考文章&#34;&gt;#&lt;/a&gt; 参考文章&lt;/h2&gt;
+&lt;p&gt;&lt;span class=&#34;exturl&#34; data-url=&#34;aHR0cHM6Ly93d3cuYXJkYW5sYWJzLmNvbS9ibG9nLzIwMTgvMTIvc2NoZWR1bGluZy1pbi1nby1wYXJ0My5odG1s&#34;&gt;Scheduling In Go : Part III - Concurrency&lt;/span&gt;&lt;br /&gt;
+&lt;span class=&#34;exturl&#34; data-url=&#34;aHR0cHM6Ly9tZWRpdW0uY29tL2Etam91cm5leS13aXRoLWdvL2dvLWdvcm91dGluZS1vcy10aHJlYWQtYW5kLWNwdS1tYW5hZ2VtZW50LTJmNWE1ZWFmNTE4YQ==&#34;&gt;Go: Goroutine, OS Thread and CPU Management - A Journey With Go - Medium&lt;/span&gt;&lt;br /&gt;
+&lt;span class=&#34;exturl&#34; data-url=&#34;aHR0cHM6Ly9tZWRpdW0uY29tL2Etam91cm5leS13aXRoLWdvL2dvLWcwLXNwZWNpYWwtZ29yb3V0aW5lLThjNzc4YzY3MDRkOA==&#34;&gt;Go: g0, Special Goroutine - A Journey With Go - Medium&lt;/span&gt;&lt;/p&gt;
+ ]]></description>
+        </item>
+    </channel>
+</rss>
