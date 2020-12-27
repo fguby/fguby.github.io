@@ -205,9 +205,9 @@
             <category term="工具" scheme="https://fguby.love/categories/%E5%B7%A5%E5%85%B7/" />
             <category term="美化" scheme="https://fguby.love/tags/%E7%BE%8E%E5%8C%96/" />
             <pubDate>Sun, 27 Dec 2020 01:29:25 +0800</pubDate>
-            <description><![CDATA[ &lt;p&gt;古话说过，工欲善其事必先利其器。这句话其实说的还蛮有道理的，作为一个颜值党，无论是 IDE 还是博客，甚至是操作系统，都需要一定程度的美化，至少赏心悦目才能吃得下去饭吧。&lt;/p&gt;
-&lt;p&gt;本篇是美化系列小记的第一篇，如何美化自己的博客。&lt;br /&gt;
-&lt;a id=&#34;more&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+            <description><![CDATA[ &lt;p&gt;作为一个颜值党，无论是 IDE 还是博客，甚至是操作系统，都需要一定程度的美化，至少赏心悦目才能吃得下去饭吧。&lt;/p&gt;
+&lt;p&gt;&lt;a id=&#34;more&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;本篇是美化系列小记的第一篇，如何美化自己的博客。&lt;/p&gt;
 &lt;h2 id=&#34;博客框架&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#博客框架&#34;&gt;#&lt;/a&gt; 博客框架&lt;/h2&gt;
 &lt;p&gt;我用过 Hexo 和 Hugo，就个人而言，可能 Hexo 目前更好用一些，毕竟主题丰富，尽管 Hugo 号称构建网站最快的框架，但是在主题和插件的支持上目前还比不上 Hexo。&lt;/p&gt;
 &lt;p&gt;Hexo 的基本使用参考官网即可，这里就不描述了。&lt;/p&gt;
