@@ -8,9 +8,161 @@
     <author>
       <name>我妻善逸</name>
     </author>
-    <updated>2020-12-29T07:29:25.000Z</updated>
+    <updated>2021-01-02T11:29:25.000Z</updated>
     <category term="宅" />
     <category term="懒" />
+    <entry>
+        <id>https://fguby.love/go-gc/</id>
+        <title>Go GC</title>
+        <link rel="alternate" href="https://fguby.love/go-gc/"/>
+        <content type="html">&lt;p&gt;GC，全称 GarbageCollection，即垃圾回收，是一种自动内存管理的机制，go 语言中采用的 GC 算法又叫三色标记法。&lt;br /&gt;
+&lt;a id=&#34;more&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&#34;什么是gc&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#什么是gc&#34;&gt;#&lt;/a&gt; 什么是 GC&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;GC&lt;/strong&gt;，全称&lt;strong&gt; GarbageCollection&lt;/strong&gt;，即垃圾回收，是一种自动内存管理的机制。&lt;/p&gt;
+&lt;p&gt;当程序向操作系统申请的内存不再需要时，垃圾回收主动将其回收并供其他代码进行内存申请时候复用，或者将其归还给操作系统，这种针对内存级别资源的自动回收过程，即为垃圾回收。&lt;/p&gt;
+&lt;p&gt;通常，垃圾回收器的执行过程被划分为两个半独立的组件：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;赋值器&lt;/strong&gt;（Mutator）：这一名称本质上是在指代用户态的代码，因为对垃圾回收器而言，用户态的代码仅仅只是在修改对象之间的引用关系。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;回收器&lt;/strong&gt;（Collector）：负责执行垃圾回收的代码。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;根对象&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#根对象&#34;&gt;#&lt;/a&gt; 根对象&lt;/h2&gt;
+&lt;p&gt;根对象在垃圾回收的术语中又叫做根集合，它是垃圾回收器在标记过程时最先检查的对象，包括：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;全局变量：程序在编译器就能确定的那些存在于程序整个生命周期的变量&lt;/li&gt;
+&lt;li&gt;执行栈：每个 goroutine 都包含自己的执行栈，这些执行栈上包含栈上的变量以及指向分配的堆内存区块的指针&lt;/li&gt;
+&lt;li&gt;寄存器：寄存器的值可能表示一个指针&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&#34;常见的gc实现方式&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#常见的gc实现方式&#34;&gt;#&lt;/a&gt; 常见的 GC 实现方式&lt;/h2&gt;
+&lt;p&gt;所有的 GC 算法其存在形式可以归结为追踪和引用计数这两种形式的混合运用&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;追踪式 GC&lt;/li&gt;
+&lt;li&gt;引用计数式 GC&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;GO 的 GC 使用的是无分代（对象没有代际之分）、不整理（回收过程中不对对象进行移动与整理）、并发（与用户代码并发执行）的三色标记清扫算法，原因在于：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;对象整理的优势是解决内存碎片问题以及 “允许” 使用顺序内存分配器。go 运行时的分配算法基于 tcmalloc，基本上没有碎片问题。&lt;/li&gt;
+&lt;li&gt;分代 GC 依赖分代假设，即 GC 将主要的回收目标放在新创建的对象上（存活时间短，更倾向于被回收），而非频繁检查所有对象，但 Go 的编译器会通过逃逸分析将大部分新生对象存储在栈上（栈直接被回收），只有那些需要长期存在的对象才会被分配到需要进行垃圾回收的堆中。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&#34;三色标记法&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#三色标记法&#34;&gt;#&lt;/a&gt; 三色标记法&lt;/h2&gt;
+&lt;p&gt;从垃圾回收器的视角来看，三色抽象规定了三种不同类型的对象，并用不同的颜色相称：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;白色对象（可能死亡）：未被回收器访问到的对象，在回收开始阶段，所有对象均为白色，当回收结束后，白色对象均不可达&lt;/li&gt;
+&lt;li&gt;灰色对象（波面）：已被回收器访问到的对象，但回收器需要对其中的一个或多个指针进行扫描，因为他们可能还指向白色对象。&lt;/li&gt;
+&lt;li&gt;黑色对象（确定存活）：已被回收器访问到的对象，其中所有字段都已被扫描，黑色对象中任何一个指针都不可能直接指向白色对象。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;stw&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#stw&#34;&gt;#&lt;/a&gt; STW&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;STW&lt;/strong&gt; 是指在垃圾回收过程中为了保证实现的正确性、防止无止境的内存增长等问题而不可避免的需要停止赋值器进一步操作对象图的一段过程。&lt;/p&gt;
+&lt;p&gt;在这个过程中整个用户代码被停止或者放缓指向，STW 越长，对用户代码造成的影响（例如延迟）就越大。&lt;/p&gt;
+&lt;p&gt;GC 在进入 STW 时，需要等待让所有的用户态代码停止。&lt;/p&gt;
+&lt;h2 id=&#34;如何观察go-gc&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#如何观察go-gc&#34;&gt;#&lt;/a&gt; 如何观察 Go GC？&lt;/h2&gt;
+&lt;figure class=&#34;highlight go&#34;&gt;&lt;figcaption data-lang=&#34;go&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;package&lt;/span&gt; main&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;func&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;allocate&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;4&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;		&lt;span class=&#34;token boolean&#34;&gt;_&lt;/span&gt; &lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;make&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;token builtin&#34;&gt;byte&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;1&lt;/span&gt; &lt;span class=&#34;token operator&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;20&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;5&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;6&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;7&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;func&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;main&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;8&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;		&lt;span class=&#34;token keyword&#34;&gt;for&lt;/span&gt; n &lt;span class=&#34;token operator&#34;&gt;:=&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt; n &lt;span class=&#34;token operator&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;100000&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt; n&lt;span class=&#34;token operator&#34;&gt;++&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;9&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;			&lt;span class=&#34;token function&#34;&gt;allocate&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;10&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;		&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;11&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;方法 1:  &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;方法 2:  &lt;code&gt;go tool trace&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;主要功能是将统计而来的信息以一种可视化的方式展示给用户。&lt;/p&gt;
+&lt;p&gt;方法 3:  &lt;code&gt;debug.ReadGCStats&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;此方式可以通过代码的方式来直接实现对感兴趣指标的监控，例如一秒监控一次 GC 的状态。&lt;/p&gt;
+&lt;h2 id=&#34;为什么会内存泄漏&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#为什么会内存泄漏&#34;&gt;#&lt;/a&gt; 为什么会内存泄漏？&lt;/h2&gt;
+&lt;h3 id=&#34;形式1-预期能被快速释放的内存因被根对象引用而没有得到迅速释放&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#形式1-预期能被快速释放的内存因被根对象引用而没有得到迅速释放&#34;&gt;#&lt;/a&gt; 形式 1: 预期能被快速释放的内存因被根对象引用而没有得到迅速释放。&lt;/h3&gt;
+&lt;p&gt;当有一个全局对象时，可能不经意间将某个变量附着在其上，且忽略的将其进行释放，则该内存永远不会得到释放。&lt;/p&gt;
+&lt;figure class=&#34;highlight go&#34;&gt;&lt;figcaption data-lang=&#34;go&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;var&lt;/span&gt; cache &lt;span class=&#34;token keyword&#34;&gt;map&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;token keyword&#34;&gt;interface&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;token keyword&#34;&gt;interface&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;func&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;keepalloc&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;4&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;		&lt;span class=&#34;token keyword&#34;&gt;for&lt;/span&gt; i &lt;span class=&#34;token operator&#34;&gt;:=&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt; i &lt;span class=&#34;token operator&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;10000&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt; i&lt;span class=&#34;token operator&#34;&gt;++&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;5&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;			m &lt;span class=&#34;token operator&#34;&gt;:=&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;make&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;token builtin&#34;&gt;byte&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;1&lt;/span&gt; &lt;span class=&#34;token operator&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;10&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;6&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;			cache&lt;span class=&#34;token punctuation&#34;&gt;[&lt;/span&gt;i&lt;span class=&#34;token punctuation&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; m&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;7&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;		&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;8&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;h3 id=&#34;形式2-goroutine泄漏&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#形式2-goroutine泄漏&#34;&gt;#&lt;/a&gt; 形式 2: goroutine 泄漏&lt;/h3&gt;
+&lt;p&gt;Goroutine 作为一种逻辑上理解的轻量级线程，需要维护执行用户代码的上下文信息。在运行过程中也需要消耗一定的内存来保存这类信息，而这些内存在目前版本的 Go 中是不会被释放的。因此，如果一个程序持续不断地产生新的 goroutine、且不结束已经创建的 goroutine 并复用这部分内存，就会造成内存泄漏的现象。&lt;/p&gt;
+&lt;h2 id=&#34;并发标记&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#并发标记&#34;&gt;#&lt;/a&gt; 并发标记&lt;/h2&gt;
+&lt;p&gt;没有用户态代码并发修改三色抽象的情况下，回收可以正常结束，但是并发回收的根本问题在于，用户态代码在回收过程中会并发地更新对象图，从而造成赋值器和回收器可能对对象图的结构产生不同的认知。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;初始状态：假设某个黑色对象 C 指向某个灰色对象 A，而 A 指向白色对象 B；&lt;/li&gt;
+&lt;li&gt;C.ref3 = c.ref2.ref1: 赋值器并发地将黑色对象 C 指向（ref3）了白色对象 B；&lt;/li&gt;
+&lt;li&gt;A.ref1 = nil: 移除灰色对象 A 对白色对象 B 的引用（ref2）&lt;/li&gt;
+&lt;li&gt;最终状态：在继续扫描的过程中，白色对象 B 永远不会被标记为黑色对象了（回收器不会重新扫描黑色对象），进而对象 B 被错误地回收&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;并发标记清除中面临的一个根本问题就是如何保证标记与清除过程的正确性。&lt;/p&gt;
+&lt;h2 id=&#34;什么是写屏障-混合写屏障如何实现&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#什么是写屏障-混合写屏障如何实现&#34;&gt;#&lt;/a&gt; 什么是写屏障、混合写屏障，如何实现？&lt;/h2&gt;
+&lt;p&gt;写屏障是一个在并发垃圾回收器中才会出现的概念，垃圾回收器的正确性体现在：不应出现对象的丢失，也不应错误的回收还不需要回收的对象。&lt;/p&gt;
+&lt;p&gt;当以下两个条件同时满足时会破坏垃圾回收器的正确性：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;条件 1: 赋值器修改对象图，导致某一黑色对象引用白色对象&lt;/li&gt;
+&lt;li&gt;条件 2: 从灰色对象出发，到达白色对象的、未经访问过的路径被赋值器破坏&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;只要能够避免其中任何一个条件，就不会出现对象丢失的情况，因为：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果条件 1 被避免，则所有白色对象均被灰色对象引用，没有白色对象会被遗漏；&lt;/li&gt;
+&lt;li&gt;如果条件 2 被避免，即便白色对象的指针被写入到黑色对象中，但从灰色对象出发，总存在一条没有访问过的路径，从而找到到达白色对象的路径，白色对象最终不会被遗漏。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;将三色不变性所定义的波面根据这两个条件进行削弱：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;当满足原有的三色不变性定义（或上面的两个条件都不满足时）的情况称为强三色不变性&lt;/li&gt;
+&lt;li&gt;当赋值器令黑色对象引用白色对象时的情况称为弱三色不变性&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当赋值器进一步破坏灰色对象到达白色对象的路径时，即打破弱三色不变性，也就破坏了回收器的正确性；&lt;/p&gt;
+&lt;p&gt;弱三色不变性的好处在于：只要存在未访问的能够到达白色对象的路径，就可以将黑色对象指向白色对象。&lt;/p&gt;
+&lt;p&gt;在允许灰色赋值器存在的算法，最坏的情况下，回收器只能将所有赋值器线程停止才能完成其根对象的完整扫描，也就是我们说的 STW。&lt;/p&gt;
+&lt;p&gt;为了确保强弱三色不变性的并发指针更新操作，需要通过赋值器屏障技术来保证指针的读写操作一致，赋值器的写屏障用来保证赋值器在进行指针写操作时，不会破坏弱三色不变性。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;黑色赋值器：已经由回收器扫描过，不会再次对其进行扫描&lt;br /&gt;
+灰色赋值器：尚未被回收器扫描，或尽管已经扫描过但扔需要重新扫描&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;有两种非常经典的写屏障：Dijkstra 插入屏障和 Yuasa 删除屏障。&lt;/p&gt;
+&lt;p&gt;灰色赋值器的 Dijkstra 插入屏障的基本思想是避免满足条件 1，&lt;/p&gt;
+&lt;figure class=&#34;highlight go&#34;&gt;&lt;figcaption data-lang=&#34;go&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;func&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;DijkstraWritePointer&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;slot &lt;span class=&#34;token operator&#34;&gt;*&lt;/span&gt;unsafe&lt;span class=&#34;token punctuation&#34;&gt;.&lt;/span&gt;Pointer&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; ptr unsafe&lt;span class=&#34;token punctuation&#34;&gt;.&lt;/span&gt;Pointer&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;		&lt;span class=&#34;token function&#34;&gt;shade&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;ptr&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;		&lt;span class=&#34;token operator&#34;&gt;*&lt;/span&gt;slot &lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; ptr&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;4&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;为了防止黑色对象指向白色对象，应该假设 &lt;code&gt;*slot&lt;/code&gt;  可能会变为黑色，为了确保 &lt;code&gt;ptr&lt;/code&gt;  不会在被赋值到 &lt;code&gt;*slot&lt;/code&gt;  前变为白色， &lt;code&gt;shade(ptr)&lt;/code&gt;  会先将指针 ptr 标记为灰色，进而避免了条件 1.&lt;/p&gt;
+&lt;p&gt;但是，由于并不清楚赋值器以后会不会将这个引用删除，因此还需要重新扫描来重新确定关系图，这时需要 STW。&lt;/p&gt;
+&lt;p&gt;插入屏障的好处在于可以立刻开始并发标记，但是因为产生了灰色的赋值器，缺陷是需要标记终止阶段 STW 时进行重新扫描。&lt;/p&gt;
+&lt;p&gt;黑色赋值器的 Yuasa 删除屏障的基本思想是避免满足条件 2:&lt;/p&gt;
+&lt;figure class=&#34;highlight go&#34;&gt;&lt;figcaption data-lang=&#34;go&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token comment&#34;&gt;// 黑色赋值器 Yuasa 屏障&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;func&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;YuasaWritePointer&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;slot &lt;span class=&#34;token operator&#34;&gt;*&lt;/span&gt;unsafe&lt;span class=&#34;token punctuation&#34;&gt;.&lt;/span&gt;Pointer&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; ptr unsafe&lt;span class=&#34;token punctuation&#34;&gt;.&lt;/span&gt;Pointer&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;		&lt;span class=&#34;token function&#34;&gt;shade&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token operator&#34;&gt;*&lt;/span&gt;slot&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;4&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;		&lt;span class=&#34;token operator&#34;&gt;*&lt;/span&gt;slot &lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; ptr&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;5&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;为了防止丢失从灰色对象到白色对象的路径，应该假设 &lt;code&gt;*slot&lt;/code&gt;  可能会变为黑色，为了确保 &lt;code&gt;ptr&lt;/code&gt;  不会在被赋值到 &lt;code&gt;*slot&lt;/code&gt;  前变为白色， &lt;code&gt;shade(*slot)&lt;/code&gt;  会先将 &lt;code&gt;*slot&lt;/code&gt;  标记为灰色，进而该写操作总是创造了一条灰色到灰色或者灰色到白色对象的路径。&lt;/p&gt;
+&lt;p&gt;Yuasa 删除屏障的优势在于不需要标记结束阶段的重新扫描，缺陷是依然会产生丢失的对象，需要在标记开始前对整个对象图进行快照。&lt;/p&gt;
+&lt;p&gt;Go 在 1.8 的时候为了简化 GC 的流程，同时减少标记终止阶段的重扫成本，将 Dijkstra 插入屏障和 Yuasa 删除屏障进行混合，形成混合写屏障。&lt;/p&gt;
+&lt;p&gt;该屏障提出的基本思想是：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;对正在被覆盖的对象进行着色，且如果当前栈未扫描完成，则同样对指针进行着色。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;gc的流程&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#gc的流程&#34;&gt;#&lt;/a&gt; GC 的流程&lt;/h2&gt;
+&lt;p&gt;当前版本的 Go 以 STW 为界限，可以将 GC 划分为五个阶段：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;GCMark&lt;br /&gt;
+ 标记准备阶段，为并发标记做准备工作，启动写屏障&lt;br /&gt;
+赋值器处于 STW 状态&lt;/li&gt;
+&lt;li&gt;GCMARK&lt;br /&gt;
+ 扫描标记阶段，与赋值器并发执行，写屏障开启&lt;br /&gt;
+赋值器处于并发状态&lt;/li&gt;
+&lt;li&gt;GCMarkTermination&lt;br /&gt;
+ 标记终止阶段，保证一个周期内标记任务完成，停止写屏障&lt;br /&gt;
+赋值器这时处于 STW 状态&lt;/li&gt;
+&lt;li&gt;GCoff&lt;br /&gt;
+ 内存清扫阶段，将需要回收的内存归还到堆中，写屏障关闭&lt;br /&gt;
+赋值器处于并发状态&lt;/li&gt;
+&lt;li&gt;GCoff&lt;br /&gt;
+ 内存归还阶段，将过多的内存归还给操作系统，写屏障关闭&lt;br /&gt;
+赋值器处于并发状态&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;触发gc的时机是什么&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#触发gc的时机是什么&#34;&gt;#&lt;/a&gt; 触发 GC 的时机是什么？&lt;/h2&gt;
+&lt;p&gt;Go 语言中对 GC 的触发时机存在两种形式:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;主动触发，通过调用 runtime.GC 来触发 GC，此调用阻塞式地等待当前 GC 运行完毕&lt;/li&gt;
+&lt;li&gt;被动触发，分为两种方式
+&lt;ul&gt;
+&lt;li&gt;使用系统监控，当超过两分钟没有产生任何 GC 时，强制触发 GC&lt;/li&gt;
+&lt;li&gt;使用步调算法，其核心思想是控制内存增长的比例&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&#34;如果内存分配速度超过标记清除的速度怎么办&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#如果内存分配速度超过标记清除的速度怎么办&#34;&gt;#&lt;/a&gt; 如果内存分配速度超过标记清除的速度怎么办？&lt;/h2&gt;
+&lt;p&gt;目前的 Go 实现中，当 GC 触发后，会首先进入并发标记的阶段。并发标记会设置一个标志，并在 mallocgc 调用时进行检查。&lt;br /&gt;
+当存在新的内存分配时，会暂停分配内存过快的那些 goroutine，并将其转去执行一些辅助标记的工作，从而达到放缓继续分配，辅助 GC 的标记工作的目的。&lt;br /&gt;
+编译器会分析用户代码，并在需要分配内存的位置，将申请内存的操作翻译为 mallocgc 调用。&lt;/p&gt;
+&lt;h2 id=&#34;go的gc如何调优&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#go的gc如何调优&#34;&gt;#&lt;/a&gt; Go 的 GC 如何调优&lt;/h2&gt;
+&lt;p&gt;Go 可供用户调整的参数只有 GOGC 环境变量，当我们谈论 GC 调优时，通常是指减少用户代码对 GC 产生的压力，这一方面包含了减少用户代码分配内存的数量，另外一方面包含了最小化 Go 的 GC 对 CPU 的使用率（即调整 GOGC）&lt;/p&gt;
+&lt;p&gt;GC 调优的核心思想：优化内存的申请速度，尽可能的少申请内存，复用已申请的内存。&lt;/p&gt;
+&lt;p&gt;GC 的触发原则是由步调算法来控制的，关键在于估计下一次需要触发 GC 时，堆的大小。如果我们在遇到海量请求的时候，为了避免 GC 频繁触发，可以将 GOGC 的值设置得更大，让 GC 触发的时间变得更晚。&lt;/p&gt;
+&lt;h2 id=&#34;相关api&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#相关api&#34;&gt;#&lt;/a&gt; 相关 APi&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;runtime.GC 手动触发 GC&lt;/li&gt;
+&lt;li&gt;runtime.ReadMemstats 读取内存相关的统计信息，其中包含部分 GC 相关的统计信息&lt;/li&gt;
+&lt;li&gt;debug.FreeOSMemory 手动将内存归还给操作系统&lt;/li&gt;
+&lt;li&gt;debug.ReadGCStats 读取关于 GC 的相关统计信息&lt;/li&gt;
+&lt;li&gt;debug.SetGCPerent 设置 GOGC 调步变量&lt;/li&gt;
+&lt;/ul&gt;
+</content>
+        <category term="Golang" scheme="https://fguby.love/categories/Golang/" />
+        <category term="GC" scheme="https://fguby.love/tags/GC/" />
+        <updated>2021-01-02T11:29:25.000Z</updated>
+    </entry>
     <entry>
         <id>https://fguby.love/typescript/</id>
         <title>TypeScript学习手册</title>
