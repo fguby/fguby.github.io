@@ -8,9 +8,22 @@
     <author>
       <name>我妻善逸</name>
     </author>
-    <updated>2021-01-24T03:29:25.000Z</updated>
+    <updated>2021-01-24T11:29:25.000Z</updated>
     <category term="宅" />
     <category term="懒" />
+    <entry>
+        <id>https://fguby.love/about/me/</id>
+        <title>孤荡的灵魂</title>
+        <link rel="alternate" href="https://fguby.love/about/me/"/>
+        <content type="html">&lt;p&gt;我想要做个丁克，其实原因也没那么复杂，除了我实在烦孩子吵闹以外，更重要的原因是 —— 我不希望自己喜欢的她在青春正好的年纪里却要挺着十个月的孕肚小心生活，不希望她承受生孩子时以及那以后所必须面临的痛苦。&lt;br /&gt;
+孩子不会比她更重要。&lt;br /&gt;
+就像 ——&lt;br /&gt;
+ 我也从不比我母亲更重要。&lt;/p&gt;
+</content>
+        <category term="about" scheme="https://fguby.love/categories/about/" />
+        <category term="about" scheme="https://fguby.love/tags/about/" />
+        <updated>2021-01-24T11:29:25.000Z</updated>
+    </entry>
     <entry>
         <id>https://fguby.love/hotpatch-2/</id>
         <title>热补丁之旅（二）ELF研究</title>

@@ -10,10 +10,23 @@
         </author>
         <description>懒、宅、二次元、萝莉控</description>
         <language>zh-CN</language>
-        <pubDate>Sun, 24 Jan 2021 11:29:25 +0800</pubDate>
-        <lastBuildDate>Sun, 24 Jan 2021 11:29:25 +0800</lastBuildDate>
+        <pubDate>Sun, 24 Jan 2021 19:29:25 +0800</pubDate>
+        <lastBuildDate>Sun, 24 Jan 2021 19:29:25 +0800</lastBuildDate>
         <category term="宅" />
         <category term="懒" />
+        <item>
+            <guid isPermalink="true">https://fguby.love/about/me/</guid>
+            <title>孤荡的灵魂</title>
+            <link>https://fguby.love/about/me/</link>
+            <category term="about" scheme="https://fguby.love/categories/about/" />
+            <category term="about" scheme="https://fguby.love/tags/about/" />
+            <pubDate>Sun, 24 Jan 2021 19:29:25 +0800</pubDate>
+            <description><![CDATA[ &lt;p&gt;我想要做个丁克，其实原因也没那么复杂，除了我实在烦孩子吵闹以外，更重要的原因是 —— 我不希望自己喜欢的她在青春正好的年纪里却要挺着十个月的孕肚小心生活，不希望她承受生孩子时以及那以后所必须面临的痛苦。&lt;br /&gt;
+孩子不会比她更重要。&lt;br /&gt;
+就像 ——&lt;br /&gt;
+ 我也从不比我母亲更重要。&lt;/p&gt;
+ ]]></description>
+        </item>
         <item>
             <guid isPermalink="true">https://fguby.love/hotpatch-2/</guid>
             <title>热补丁之旅（二）ELF研究</title>
