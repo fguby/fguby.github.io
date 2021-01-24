@@ -7,17 +7,6 @@
     "home_page_url": "https://fguby.love",
     "items": [
         {
-            "id": "https://fguby.love/about/me/",
-            "url": "https://fguby.love/about/me/",
-            "title": "孤荡的灵魂",
-            "date_published": "2021-01-24T11:29:25.000Z",
-            "content_html": "<p>我想要做个丁克，其实原因也没那么复杂，除了我实在烦孩子吵闹以外，更重要的原因是 —— 我不希望自己喜欢的她在青春正好的年纪里却要挺着十个月的孕肚小心生活，不希望她承受生孩子时以及那以后所必须面临的痛苦。<br />\n孩子不会比她更重要。<br />\n就像 ——<br />\n 我也从不比我母亲更重要。</p>\n",
-            "tags": [
-                "about",
-                "about"
-            ]
-        },
-        {
             "id": "https://fguby.love/hotpatch-2/",
             "url": "https://fguby.love/hotpatch-2/",
             "title": "热补丁之旅（二）ELF研究",
