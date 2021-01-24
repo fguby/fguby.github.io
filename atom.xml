@@ -298,9 +298,9 @@ finalizer function (stage: 3)&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;exturl&#34; data-url=&#34;aHR0cHM6Ly9yZWZzcGVjcy5saW51eGZvdW5kYXRpb24ub3JnL2VsZi9nYWJpNCsvY2g0LmVoZWFkZXIuaHRtbA==&#34;&gt;https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;exturl&#34; data-url=&#34;aHR0cHM6Ly9wYXBlci5zZWVidWcub3JnLzg5Lw==&#34;&gt;https://paper.seebug.org/89/&lt;/span&gt;&lt;/p&gt;
 </content>
-        <category term="C" scheme="https://fguby.love/categories/C/" />
-        <category term="ELF" scheme="https://fguby.love/categories/C/ELF/" />
-        <category term="hotpatch" scheme="https://fguby.love/tags/hotpatch/" />
+        <category term="热补丁" scheme="https://fguby.love/categories/hotpatch/" />
+        <category term="C" scheme="https://fguby.love/tags/C/" />
+        <category term="ELF" scheme="https://fguby.love/tags/ELF/" />
         <updated>2021-01-24T03:29:25.000Z</updated>
     </entry>
     <entry>
@@ -364,8 +364,9 @@ HELLOWORLD!!  // 程序输出
 &lt;/li&gt;
 &lt;/ol&gt;
 </content>
-        <category term="C" scheme="https://fguby.love/categories/C/" />
-        <category term="hotpatch" scheme="https://fguby.love/tags/hotpatch/" />
+        <category term="热补丁" scheme="https://fguby.love/categories/hotpatch/" />
+        <category term="C" scheme="https://fguby.love/tags/C/" />
+        <category term="Inter Pin" scheme="https://fguby.love/tags/Inter-Pin/" />
         <updated>2021-01-23T13:29:25.000Z</updated>
     </entry>
     <entry>

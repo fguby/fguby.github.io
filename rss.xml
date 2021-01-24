@@ -18,9 +18,9 @@
             <guid isPermalink="true">https://fguby.love/hotpatch-2/</guid>
             <title>热补丁之旅（二）ELF研究</title>
             <link>https://fguby.love/hotpatch-2/</link>
-            <category term="C" scheme="https://fguby.love/categories/C/" />
-            <category term="ELF" scheme="https://fguby.love/categories/C/ELF/" />
-            <category term="hotpatch" scheme="https://fguby.love/tags/hotpatch/" />
+            <category term="热补丁" scheme="https://fguby.love/categories/hotpatch/" />
+            <category term="C" scheme="https://fguby.love/tags/C/" />
+            <category term="ELF" scheme="https://fguby.love/tags/ELF/" />
             <pubDate>Sun, 24 Jan 2021 11:29:25 +0800</pubDate>
             <description><![CDATA[ &lt;p&gt;要想反编译一个 Linux 二进制文件或者实现热补丁的原理，那么不可避免地，首先就需要理解二进制格式本身。&lt;/p&gt;
 &lt;p&gt;&lt;a id=&#34;more&#34;&gt;&lt;/a&gt;&lt;/p&gt;
@@ -310,8 +310,9 @@ finalizer function (stage: 3)&lt;/p&gt;
             <guid isPermalink="true">https://fguby.love/hotpatch-1/</guid>
             <title>热补丁之旅（一）开胃小菜</title>
             <link>https://fguby.love/hotpatch-1/</link>
-            <category term="C" scheme="https://fguby.love/categories/C/" />
-            <category term="hotpatch" scheme="https://fguby.love/tags/hotpatch/" />
+            <category term="热补丁" scheme="https://fguby.love/categories/hotpatch/" />
+            <category term="C" scheme="https://fguby.love/tags/C/" />
+            <category term="Inter Pin" scheme="https://fguby.love/tags/Inter-Pin/" />
             <pubDate>Sat, 23 Jan 2021 21:29:25 +0800</pubDate>
             <description><![CDATA[ &lt;p&gt;如何在进程不停止的情况下进行某些函数的替换呢？&lt;/p&gt;
 &lt;p&gt;&lt;a id=&#34;more&#34;&gt;&lt;/a&gt;&lt;/p&gt;
