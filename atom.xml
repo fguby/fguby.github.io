@@ -8,12 +8,304 @@
     <author>
       <name>我妻善逸</name>
     </author>
-    <updated>2021-01-23T13:29:25.000Z</updated>
+    <updated>2021-01-24T03:29:25.000Z</updated>
     <category term="宅" />
     <category term="懒" />
     <entry>
+        <id>https://fguby.love/hotpatch-2/</id>
+        <title>热补丁之旅（二）ELF研究</title>
+        <link rel="alternate" href="https://fguby.love/hotpatch-2/"/>
+        <content type="html">&lt;p&gt;要想反编译一个 Linux 二进制文件或者实现热补丁的原理，那么不可避免地，首先就需要理解二进制格式本身。&lt;/p&gt;
+&lt;p&gt;&lt;a id=&#34;more&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;一个 ELF 文件由 4 部分组成&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;ELF 头 （ELF header）&lt;/li&gt;
+&lt;li&gt;程序头表 （Program header table）&lt;/li&gt;
+&lt;li&gt;节 （Section）&lt;/li&gt;
+&lt;li&gt;节头表 （Section header table）&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&#34;文件类型&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#文件类型&#34;&gt;#&lt;/a&gt; 文件类型&lt;/h2&gt;
+&lt;p&gt;一个 ELF 文件可以分为以下几种类型 （由 e_type 的值决定）&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;ET_NOTE&lt;/p&gt;
+&lt;p&gt;未知类型，表明文件类型不确定，或者还未定义&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;ET_REL&lt;/p&gt;
+&lt;p&gt;重定位文件，意味着这个文件里标记了一段可重定位的代码，也就是编译后的.o 文件&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;ET_EXEC&lt;/p&gt;
+&lt;p&gt;可执行文件，就是通常所说的二进制文件。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;ET_DYN&lt;/p&gt;
+&lt;p&gt;共享目标文件，一个动态的可链接的目标文件，也称为共享库，也就是 so 文件&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;ET_CORE&lt;/p&gt;
+&lt;p&gt;核心文件，在程序崩溃或者进程传递了一个 SIGSEGV 信号时，会在核心文件中记录整个进程的镜像信息&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&#34;elf-header&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#elf-header&#34;&gt;#&lt;/a&gt; ELF header&lt;/h2&gt;
+&lt;p&gt;程序头是对二进制文件中段的描述，是程序装载所必需的一部分。段是在内核装载时被解析的，描述了磁盘上可执行文件的内存布局以及如何映射到内存中。&lt;/p&gt;
+&lt;p&gt;64 位可执行文件程序头结构如下：（每个字段的详细值都可以从该节末的链接中查看）&lt;/p&gt;
+&lt;figure class=&#34;highlight c&#34;&gt;&lt;figcaption data-lang=&#34;c&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;typedef&lt;/span&gt; &lt;span class=&#34;token keyword&#34;&gt;struct&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  &lt;span class=&#34;token keyword&#34;&gt;unsigned&lt;/span&gt; &lt;span class=&#34;token keyword&#34;&gt;char&lt;/span&gt; e_ident&lt;span class=&#34;token punctuation&#34;&gt;[&lt;/span&gt;EI_NIDENT&lt;span class=&#34;token punctuation&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;   &lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;4&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Half    e_type&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;        	&lt;span class=&#34;token comment&#34;&gt;/* 文件类型 */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;5&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Half    e_machine&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;       &lt;span class=&#34;token comment&#34;&gt;/* 编译平台 */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;6&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Word    e_version&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;       &lt;span class=&#34;token comment&#34;&gt;/* 版本 */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;7&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Addr    e_entry&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;       	&lt;span class=&#34;token comment&#34;&gt;/* 入口函数的虚拟地址 */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;8&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Off 	e_phoff&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;      		&lt;span class=&#34;token comment&#34;&gt;/* 程序头表的偏移量 */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;9&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Off 	e_shoff&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;       	&lt;span class=&#34;token comment&#34;&gt;/* 节头表的偏移量 */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;10&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Word    e_flags&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;       	&lt;span class=&#34;token comment&#34;&gt;/* Processor-specific flags */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;11&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Half    e_ehsize&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;      	&lt;span class=&#34;token comment&#34;&gt;/* ELF header size in bytes */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;12&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Half    e_phentsize&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;     &lt;span class=&#34;token comment&#34;&gt;/* 程序头表的大小 */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;13&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Half    e_phnum&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;        	&lt;span class=&#34;token comment&#34;&gt;/* 程序头表的数量 */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;14&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Half    e_shentsize&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;     &lt;span class=&#34;token comment&#34;&gt;/* 节头表的大小 */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;15&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Half    e_shnum&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;        	&lt;span class=&#34;token comment&#34;&gt;/* 节头表的数目 */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;16&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  Elf64_Half    e_shstrndx&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;     	&lt;span class=&#34;token comment&#34;&gt;/* Section header string table index */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;17&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt; Elf64_Ehdr&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;第一个字段 &lt;code&gt;e_ident&lt;/code&gt;  是一个 16 字节的数组，用于标识文件。 &lt;code&gt;e_ident&lt;/code&gt;  的前 4 个字节（即文件本身的前 4 个字节）是序列（0x7f, &#39;E&#39;, &#39;L&#39;, &#39;F&#39;)，用来将文件标记为 ELF 文件&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;e_type&lt;/code&gt;  目标文件类型，主要值：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Name&lt;/th&gt;
+&lt;th&gt;Value&lt;/th&gt;
+&lt;th&gt;Meaning&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;ET_NOTE&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;未知类型&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ET_REL&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;可重定位文件&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ET_EXEC&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;可执行的二进制文件&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ET_DYN&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;动态库 so 文件&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ET_CORE&lt;/td&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;core 文件&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;code&gt;e_machine&lt;/code&gt;  标明了该二进制文件的编译平台，例如 &lt;code&gt;0x3e&lt;/code&gt;  代表 AMD x86-64 的架构&lt;/p&gt;
+&lt;p&gt;可以从文末的链接中查看每个字段的详细信息。&lt;/p&gt;
+&lt;h3 id=&#34;重要属性&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#重要属性&#34;&gt;#&lt;/a&gt; 重要属性&lt;/h3&gt;
+&lt;p&gt;有几个比较重要的属性需要提前注意一下，后面写代码时会用到：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;e_phoff&lt;/p&gt;
+&lt;p&gt;segment 的头部偏移&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;e_phentsize&lt;/p&gt;
+&lt;p&gt;segment 的头部大小&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;e_phnum&lt;/p&gt;
+&lt;p&gt;segment 的头部数量&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;e_shoff&lt;/p&gt;
+&lt;p&gt;section 的头部偏移&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;e_shentsize&lt;/p&gt;
+&lt;p&gt;section 的头部大小&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;e_shnum&lt;/p&gt;
+&lt;p&gt;section 的头部数量&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;关于e_shstrndx&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#关于e_shstrndx&#34;&gt;#&lt;/a&gt; 关于 &lt;code&gt;e_shstrndx&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;ELF 文件中的每个 section 都是有名字的，比如.data、.text，每个名字其实都是一个字符串，既然是字符串就需要一个字符串池来保存，而这个字符串池其实也是一个 section。这个特殊的字符串池叫.shstrtab。&lt;/p&gt;
+&lt;p&gt;前面的示例图中其实也能够看到，所有 section 的头部都是连续存放在一起的，类似于一个数组，而这个 e_shsrtndx 变量就是.shstrtab 这个节在这个数组中的下标。&lt;/p&gt;
+&lt;h2 id=&#34;program-headers&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#program-headers&#34;&gt;#&lt;/a&gt; Program headers&lt;/h2&gt;
+&lt;p&gt;程序头是对二进制文件中段的描述，是程序装载必需的一部分。段（segment）是在内核装载时被解析的，描述了磁盘上可执行文件的内存布局以及如何映射到内存中，可以通过引用原始 ELF 头中 &lt;code&gt;e_phoff&lt;/code&gt;  的偏移量来得到程序头表。&lt;/p&gt;
+&lt;figure class=&#34;highlight c&#34;&gt;&lt;figcaption data-lang=&#34;c&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;typedef&lt;/span&gt; &lt;span class=&#34;token keyword&#34;&gt;struct&lt;/span&gt; &lt;span class=&#34;token class-name&#34;&gt;elf64_phdr&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Elf64_Word p_type&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Elf64_Word p_flags&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;4&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Elf64_Off p_offset&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt; &lt;span class=&#34;token comment&#34;&gt;/* Segment file offset */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;5&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Elf64_Addr p_vaddr&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt; &lt;span class=&#34;token comment&#34;&gt;/* Segment virtual address */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;6&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Elf64_Addr p_paddr&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt; &lt;span class=&#34;token comment&#34;&gt;/* Segment physical address */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;7&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Elf64_Xword p_filesz&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;   &lt;span class=&#34;token comment&#34;&gt;/* Segment size in file */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;8&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Elf64_Xword p_memsz&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;    &lt;span class=&#34;token comment&#34;&gt;/* Segment size in memory */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;9&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Elf64_Xword p_align&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;    &lt;span class=&#34;token comment&#34;&gt;/* Segment alignment, file &amp;amp; memory */&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;10&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;  &lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt; Elf64_Phdr&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;根据 &lt;code&gt;p_type&lt;/code&gt;  的值，可以判断段的类型，从 &lt;code&gt;elf.h&lt;/code&gt;  头文件中可以看到段的类型比较多&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-c#&#34;&gt;#define	PT_NULL		0		/* Program header table entry unused */
+#define PT_LOAD		1		/* Loadable program segment */
+#define PT_DYNAMIC	2		/* Dynamic linking information */
+#define PT_INTERP	3		/* Program interpreter */
+#define PT_NOTE		4		/* Auxiliary information */
+#define PT_SHLIB	5		/* Reserved */
+#define PT_PHDR		6		/* Entry for header table itself */
+#define PT_TLS		7		/* Thread-local storage segment */
+#define	PT_NUM		8		/* Number of defined types */
+#define PT_LOOS		0x60000000	/* Start of OS-specific */
+#define PT_GNU_EH_FRAME	0x6474e550	/* GCC .eh_frame_hdr segment */
+#define PT_GNU_STACK	0x6474e551	/* Indicates stack executability */
+#define PT_GNU_RELRO	0x6474e552	/* Read-only after relocation */
+#define PT_LOSUNW	0x6ffffffa
+#define PT_SUNWBSS	0x6ffffffa	/* Sun Specific segment */
+#define PT_SUNWSTACK	0x6ffffffb	/* Stack segment */
+#define PT_HISUNW	0x6fffffff
+#define PT_HIOS		0x6fffffff	/* End of OS-specific */
+#define PT_LOPROC	0x70000000	/* Start of processor-specific */
+#define PT_HIPROC	0x7fffffff	/* End of processor-specific */
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里介绍一些比较重要的段。&lt;/p&gt;
+&lt;h3 id=&#34;pt_load&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#pt_load&#34;&gt;#&lt;/a&gt; PT_LOAD&lt;/h3&gt;
+&lt;p&gt;一个 ELF 文件至少有一个 PT_LOAD 类型的段，这类程序头描述的是可装载的段，也就是说，这种类型的段将被装载或者映射到内存中。&lt;/p&gt;
+&lt;p&gt;例如，一个需要动态链接的 ELF 可执行文件通常会包含以下两个可以装载的段（类型为 PT_LOAD)&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;存放程序代码的 text 段&lt;/li&gt;
+&lt;li&gt;存放全局变量和动态链接信息的 data 段&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;text 段也就是经常说的代码段，该段的权限一般设置为 PT_X | PT_R ，0x05&lt;/p&gt;
+&lt;p&gt;data 段也就是数据段，权限一般设置为 PT_W  | PT_R （读和写）0x06&lt;/p&gt;
+&lt;p&gt;这里要注意的是，text 段和 data 段都是 &lt;code&gt;PT_LOAD&lt;/code&gt;  类型的段，判断段究竟是 &lt;code&gt;text&lt;/code&gt;  段还是 &lt;code&gt;data&lt;/code&gt;  段还需要取 &lt;code&gt;p_offset&lt;/code&gt;  的值。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;p_offset&lt;/code&gt;  等于 0 的 &lt;code&gt;PT_LOAD&lt;/code&gt;  类型的段才是 text 段。&lt;/p&gt;
+&lt;h3 id=&#34;pt_dynamic&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#pt_dynamic&#34;&gt;#&lt;/a&gt; PT_DYNAMIC&lt;/h3&gt;
+&lt;p&gt;动态段是动态链接可执行文件所特有的，包含了动态链接器所必需的一些信息。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;运行时需要链接的共享库列表&lt;/li&gt;
+&lt;li&gt;全局偏移表（GOT）的地址&lt;/li&gt;
+&lt;li&gt;重定位的相关信息&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;pt_note&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#pt_note&#34;&gt;#&lt;/a&gt; PT_NOTE&lt;/h3&gt;
+&lt;p&gt;该类型的段可能保存了与系统相关的附加信息，在可执行文件实际运行时是不需要这个段的。&lt;/p&gt;
+&lt;h3 id=&#34;pt_interp&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#pt_interp&#34;&gt;#&lt;/a&gt; PT_INTERP&lt;/h3&gt;
+&lt;p&gt;该段只将位置和大小信息存放在一个以 null 为终止符的字符串中，是对程序解释器位置的描述。&lt;/p&gt;
+&lt;p&gt;例如， &lt;code&gt;/lib/ld-linx.so.2&lt;/code&gt;  一般是指动态链接器的位置，也即程序解释器的位置。&lt;/p&gt;
+&lt;h3 id=&#34;pt_phdr&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#pt_phdr&#34;&gt;#&lt;/a&gt; PT_PHDR&lt;/h3&gt;
+&lt;p&gt;该段保存了程序头表的本身的位置和大小，保存了所有的 Phdr 对文件中段的描述信息。&lt;/p&gt;
+&lt;h2 id=&#34;section-header&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#section-header&#34;&gt;#&lt;/a&gt; Section header&lt;/h2&gt;
+&lt;p&gt;在每个段中，会有代码和数据被划分为不同的节。节头表是对这些节的位置和大小的描述，主要用于链接和调试。&lt;/p&gt;
+&lt;h3 id=&#34;text节&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#text节&#34;&gt;#&lt;/a&gt; .text 节&lt;/h3&gt;
+&lt;p&gt;存放编译好的二进制可执行代码，如果存在 Phdr，.text 节就会存在于.text 段中，由于.text 节保存了程序代码，因此节的类型为 &lt;code&gt;SHT_PROGBITS&lt;/code&gt;&lt;/p&gt;
+&lt;h3 id=&#34;rodata节&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#rodata节&#34;&gt;#&lt;/a&gt; .rodata 节&lt;/h3&gt;
+&lt;p&gt;保存只读的数据，例如字符串常量、const 的变量，只能在 text 段中找到.rodata 节&lt;/p&gt;
+&lt;h3 id=&#34;plt节&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#plt节&#34;&gt;#&lt;/a&gt; .plt 节&lt;/h3&gt;
+&lt;p&gt;包含了动态链接器调用从共享库导入的函数所必需的相关代码&lt;/p&gt;
+&lt;h3 id=&#34;data节&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#data节&#34;&gt;#&lt;/a&gt; .data 节&lt;/h3&gt;
+&lt;p&gt;.data 节存在于 data 段中，保存了初始化的全局变量等数据&lt;/p&gt;
+&lt;h3 id=&#34;bss节&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#bss节&#34;&gt;#&lt;/a&gt; .bss 节&lt;/h3&gt;
+&lt;p&gt;保存了未进行初始化的全局变量，是 data 段的一部分，占用空间不超过 4 字节，仅表示这个节本身的空间。&lt;/p&gt;
+&lt;h3 id=&#34;symtab&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#symtab&#34;&gt;#&lt;/a&gt; .symtab&lt;/h3&gt;
+&lt;p&gt;符号表，记录的则是函数和变量&lt;/p&gt;
+&lt;h3 id=&#34;strtab&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#strtab&#34;&gt;#&lt;/a&gt; .strtab&lt;/h3&gt;
+&lt;p&gt;字符串表、字符串常量和变量名&lt;/p&gt;
+&lt;h3 id=&#34;gotplt节&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#gotplt节&#34;&gt;#&lt;/a&gt; .got.plt 节&lt;/h3&gt;
+&lt;p&gt;.got 节保存了全局偏移表，.got 节和.plt 节一起提供了对导入的共享库函数的访问入口，由动态链接器在运行时进行修改。&lt;/p&gt;
+&lt;h3 id=&#34;dynsym节&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#dynsym节&#34;&gt;#&lt;/a&gt; .dynsym 节&lt;/h3&gt;
+&lt;p&gt;保存了从共享库导入的动态符号信息，该节保存在 text 段中，节类型被标记为 SHT_DYNSYM&lt;/p&gt;
+&lt;p&gt;一个 &lt;code&gt;text&lt;/code&gt;  段的布局如下：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;[.text] 程序代码&lt;/li&gt;
+&lt;li&gt;[.rodata] 只读数据&lt;/li&gt;
+&lt;li&gt;[.hash] 符号散列表&lt;/li&gt;
+&lt;li&gt;[.dynsym] 共享目标文件符号数据&lt;/li&gt;
+&lt;li&gt;[.dynstr] 共享目录文件符号名称&lt;/li&gt;
+&lt;li&gt;[.plt] 过程链接表&lt;/li&gt;
+&lt;li&gt;[.rel.got] G.O.T 重定位数据&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;elf符号&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#elf符号&#34;&gt;#&lt;/a&gt; ELF 符号&lt;/h2&gt;
+&lt;p&gt;符号是对某些类型的数据或者代码（如全局变量和函数）的符号引用。&lt;/p&gt;
+&lt;p&gt;例如，printf () 函数会在动态符号表.dynsym 中存有一个指向该函数的符号条目。&lt;/p&gt;
+&lt;p&gt;在大多数共享库和动态链接可执行文件中，存在两个符号表： &lt;code&gt;.dynsym&lt;/code&gt;  和 &lt;code&gt;.symtab&lt;/code&gt; 。&lt;/p&gt;
+&lt;p&gt;.dynsym 保存了引用来自外部文件符号的全局符号，如 printf 这样的库函数，.dynsym 保存的符号是.symtab 所保存符号的子集，.symtab 中还保存了可执行文件的本地符号，如全局变量或者代码中定义的本地函数。&lt;/p&gt;
+&lt;p&gt;因此，.symtab 保存了所有的符号，而.dynsym 只保存动态 / 全局符号。&lt;/p&gt;
+&lt;p&gt;使用 &lt;code&gt;readelf -S main&lt;/code&gt;  查看二进制文件的节头，这里我删去一些暂时无用的节&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[Nr] Name              Type             Address           Offset
+       Size              EntSize          Flags  Link  Info  Align
+
+  [ 5] .dynsym           DYNSYM           00000000000002b8  000002b8
+       00000000000000f0  0000000000000018   A       6     1     8
+
+  [26] .symtab           SYMTAB           0000000000000000  00001040
+       0000000000000660  0000000000000018          27    43     8
+
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;从打印出来的信息中可以看到一部分节的 Flags 被标记为了 A（ALLOC）、WA（WRITE/ALLOC）或者 AX（ALLOC/EXC）&lt;/p&gt;
+&lt;p&gt;.dynsym 被标记了 A（ALLOC），而.symtab 则没有被标记&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;ALLOC&lt;/code&gt;  表示有该标记的节会在运行时分配并装载进入内存，而.symtab 不是在运行时必需的，因此不会被装载到内存中。.dynsym 保存的符号只能在运行时被解析，因此是运行时动态链接器所需要的唯一符号。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;.dynsym&lt;/code&gt;  符号表对于动态链接可执行文件的执行来说是必需的&lt;/p&gt;
+&lt;p&gt;一个 64 位 ELF 文件符号项的结构&lt;/p&gt;
+&lt;figure class=&#34;highlight c&#34;&gt;&lt;figcaption data-lang=&#34;c&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;typedef&lt;/span&gt; &lt;span class=&#34;token keyword&#34;&gt;struct&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    uint32_t      st_name&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token keyword&#34;&gt;unsigned&lt;/span&gt; &lt;span class=&#34;token keyword&#34;&gt;char&lt;/span&gt; st_info&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;4&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token keyword&#34;&gt;unsigned&lt;/span&gt; &lt;span class=&#34;token keyword&#34;&gt;char&lt;/span&gt; st_other&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;5&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    uint16_t      st_shndx&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;6&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Elf64_Addr    st_value&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;7&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Uint64_t      st_size&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;8&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt; Elf64_sym&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;st_name&lt;/p&gt;
+&lt;p&gt;保存了指向符号表中字符串表（位于.dynstr 或者.strtab）的偏移地址，偏移地址存放着符号的名称，如 printf&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;st_value&lt;/p&gt;
+&lt;p&gt;存放符号的值（可能是地址或者位置偏移量）&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;st_size&lt;/p&gt;
+&lt;p&gt;存放了一个符号的大小&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;st_shndx&lt;/p&gt;
+&lt;p&gt;每个符号表条目的定义都与某些节对应，该变量保存了相关节头表的索引&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;st_info&lt;/p&gt;
+&lt;p&gt;符号类型&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;查看符号表条目&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#查看符号表条目&#34;&gt;#&lt;/a&gt; 查看符号表条目&lt;/h3&gt;
+&lt;figure class=&#34;highlight shell&#34;&gt;&lt;figcaption data-lang=&#34;Bash&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;readelf -s 二进制文件 &lt;span class=&#34;token comment&#34;&gt;# 注意是小写的 s&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;h2 id=&#34;修改elf文件的入口&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#修改elf文件的入口&#34;&gt;#&lt;/a&gt; 修改 ELF 文件的入口&lt;/h2&gt;
+&lt;p&gt;好了，去掉那些长篇大论的废话，学习还是要从实践开始入手。&lt;/p&gt;
+&lt;p&gt;如果你对结构还有不清楚的地方，可以自行去谷歌学习一下，在这里我引用一张别的博客所画的结构图，文末有博客链接。&lt;/p&gt;
+&lt;p&gt;&lt;img data-src=&#34;/images/elf-file-format.png&#34; alt=&#34;avatar&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;先从一个简单的功能开始，修改一个 ELF 文件的入口地址。&lt;/p&gt;
+&lt;p&gt;一段示例代码&lt;/p&gt;
+&lt;figure class=&#34;highlight c&#34;&gt;&lt;figcaption data-lang=&#34;c&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token macro property&#34;&gt;&lt;span class=&#34;token directive-hash&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;token directive keyword&#34;&gt;include&lt;/span&gt; &lt;span class=&#34;token string&#34;&gt;&amp;lt;stdio.h&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token macro property&#34;&gt;&lt;span class=&#34;token directive-hash&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;token directive keyword&#34;&gt;include&lt;/span&gt; &lt;span class=&#34;token string&#34;&gt;&amp;lt;stdlib.h&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;4&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;int&lt;/span&gt; stage &lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;5&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;6&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;__attribute__&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;constructor&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;7&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;initializer&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;8&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    stage &lt;span class=&#34;token operator&#34;&gt;+=&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;9&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token function&#34;&gt;printf&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token string&#34;&gt;&#34;initializer function (stage: %d) \n&#34;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; stage&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;10&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;11&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;12&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;__attribute__&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;destructor&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;13&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;finalizer&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;14&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    stage &lt;span class=&#34;token operator&#34;&gt;+=&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;15&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token function&#34;&gt;printf&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token string&#34;&gt;&#34;finalizer function (stage: %d) \n&#34;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; stage&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;16&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;17&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;18&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;main&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token keyword&#34;&gt;void&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;19&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    stage &lt;span class=&#34;token operator&#34;&gt;+=&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;20&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token function&#34;&gt;printf&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token string&#34;&gt;&#34;main function (stage: %d) \n&#34;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; stage&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;21&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token keyword&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;22&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;23&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;24&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;alternativeEntryPoint&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;25&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    stage &lt;span class=&#34;token operator&#34;&gt;+=&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;26&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token function&#34;&gt;printf&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token string&#34;&gt;&#34;This is an alternative entry point to the program (stage: %d) \n&#34;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; stage&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;27&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token function&#34;&gt;exit&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token number&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;28&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;正常编译后的打印应该如下：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;initializer function (stage: 1)&lt;br /&gt;
+main function (stage: 2)&lt;br /&gt;
+finalizer function (stage: 3)&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;首先，找一下 &lt;code&gt;alternativeEntryPoint&lt;/code&gt;  函数的地址&lt;/p&gt;
+&lt;figure class=&#34;highlight shell&#34;&gt;&lt;figcaption data-lang=&#34;Bash&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;readelf -s &lt;span class=&#34;token builtin class-name&#34;&gt;test&lt;/span&gt; &lt;span class=&#34;token operator&#34;&gt;|&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;grep&lt;/span&gt; alternativeEntryPoint&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;得到&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt; 54: 000000000000074b    54 FUNC    GLOBAL DEFAULT   14 alternativeEntryPoint
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ok，可以看到 &lt;code&gt;alternativeEntryPoint&lt;/code&gt;  函数的入口地址是 &lt;code&gt;0x74b&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;然后，修改代码如下&lt;/p&gt;
+&lt;figure class=&#34;highlight c&#34;&gt;&lt;figcaption data-lang=&#34;c&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token macro property&#34;&gt;&lt;span class=&#34;token directive-hash&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;token directive keyword&#34;&gt;include&lt;/span&gt; &lt;span class=&#34;token string&#34;&gt;&amp;lt;stdlib.h&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;2&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token macro property&#34;&gt;&lt;span class=&#34;token directive-hash&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;token directive keyword&#34;&gt;include&lt;/span&gt; &lt;span class=&#34;token string&#34;&gt;&amp;lt;fcntl.h&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;3&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token macro property&#34;&gt;&lt;span class=&#34;token directive-hash&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;token directive keyword&#34;&gt;include&lt;/span&gt; &lt;span class=&#34;token string&#34;&gt;&amp;lt;stdio.h&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;4&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token macro property&#34;&gt;&lt;span class=&#34;token directive-hash&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;token directive keyword&#34;&gt;include&lt;/span&gt; &lt;span class=&#34;token string&#34;&gt;&amp;lt;sys/stat.h&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;5&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token macro property&#34;&gt;&lt;span class=&#34;token directive-hash&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;token directive keyword&#34;&gt;include&lt;/span&gt; &lt;span class=&#34;token string&#34;&gt;&amp;lt;sys/mman.h&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;6&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token macro property&#34;&gt;&lt;span class=&#34;token directive-hash&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;token directive keyword&#34;&gt;include&lt;/span&gt; &lt;span class=&#34;token string&#34;&gt;&amp;lt;unistd.h&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;7&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token macro property&#34;&gt;&lt;span class=&#34;token directive-hash&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;token directive keyword&#34;&gt;include&lt;/span&gt; &lt;span class=&#34;token string&#34;&gt;&amp;lt;elf.h&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;8&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;9&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token keyword&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;main&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;10&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;11&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token keyword&#34;&gt;int&lt;/span&gt; fd&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;12&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token keyword&#34;&gt;struct&lt;/span&gt; &lt;span class=&#34;token class-name&#34;&gt;stat&lt;/span&gt; st&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;13&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    Elf64_Ehdr &lt;span class=&#34;token operator&#34;&gt;*&lt;/span&gt;ehdr&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;14&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;15&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    fd &lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;open&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token string&#34;&gt;&#34;test&#34;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; O_RDWR&lt;span class=&#34;token operator&#34;&gt;|&lt;/span&gt;O_CREAT&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;00777&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;16&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token keyword&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;fd &lt;span class=&#34;token operator&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;17&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;        &lt;span class=&#34;token function&#34;&gt;perror&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token string&#34;&gt;&#34;open fail&#34;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;18&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;        &lt;span class=&#34;token function&#34;&gt;exit&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token operator&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;token number&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;19&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;20&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;21&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token keyword&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token function&#34;&gt;fstat&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;fd&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;token operator&#34;&gt;&amp;amp;&lt;/span&gt;st&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token operator&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;22&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;        &lt;span class=&#34;token function&#34;&gt;perror&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token string&#34;&gt;&#34;fstat fail&#34;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;23&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;        &lt;span class=&#34;token function&#34;&gt;exit&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token operator&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;token number&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;       &lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;24&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;25&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;26&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token comment&#34;&gt;// 建立内存映射&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;27&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token keyword&#34;&gt;char&lt;/span&gt; &lt;span class=&#34;token operator&#34;&gt;*&lt;/span&gt;mem &lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;token function&#34;&gt;mmap&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token constant&#34;&gt;NULL&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; st&lt;span class=&#34;token punctuation&#34;&gt;.&lt;/span&gt;st_size&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; PROT_READ&lt;span class=&#34;token operator&#34;&gt;|&lt;/span&gt;PROT_WRITE&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; MAP_SHARED&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; fd&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;28&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token keyword&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;mem &lt;span class=&#34;token operator&#34;&gt;==&lt;/span&gt; MAP_FAILED&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;&amp;#123;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;29&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;        &lt;span class=&#34;token function&#34;&gt;perror&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token string&#34;&gt;&#34;mmap failed&#34;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;30&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;        &lt;span class=&#34;token function&#34;&gt;exit&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token operator&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;token number&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;31&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;32&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;33&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    ehdr &lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;Elf64_Ehdr &lt;span class=&#34;token operator&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;mem&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;34&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token function&#34;&gt;printf&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;token string&#34;&gt;&#34;old entry: %lx&#34;&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;,&lt;/span&gt; ehdr&lt;span class=&#34;token operator&#34;&gt;-&gt;&lt;/span&gt;e_entry&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;35&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;36&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token comment&#34;&gt;// 在这里将入口修改为 0x74b&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;37&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    ehdr&lt;span class=&#34;token operator&#34;&gt;-&gt;&lt;/span&gt;e_entry &lt;span class=&#34;token operator&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;0x74b&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;38&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token function&#34;&gt;close&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;(&lt;/span&gt;fd&lt;span class=&#34;token punctuation&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;39&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;    &lt;span class=&#34;token keyword&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;token number&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;token punctuation&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td data-num=&#34;40&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;&lt;span class=&#34;token punctuation&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;p&gt;编译修改代码 =&amp;gt; 执行，应该会打印出原本 ELF 文件的入口地址。&lt;/p&gt;
+&lt;p&gt;这时候，再用 &lt;code&gt;readelf&lt;/code&gt;  命令查看一下二进制文件：&lt;/p&gt;
+&lt;figure class=&#34;highlight shell&#34;&gt;&lt;figcaption data-lang=&#34;Bash&#34;&gt;&lt;/figcaption&gt;&lt;table&gt;&lt;tr&gt;&lt;td data-num=&#34;1&#34;&gt;&lt;/td&gt;&lt;td&gt;&lt;pre&gt;readelf -h &lt;span class=&#34;token builtin class-name&#34;&gt;test&lt;/span&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;pre&gt;&lt;code&gt;ELF Header:
+  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00 
+  Class:                             ELF64
+  Data:                              2&#39;s complement, little endian
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - System V
+  ABI Version:                       0
+  Type:                              DYN (Shared object file)
+  Machine:                           Advanced Micro Devices X86-64
+  Version:                           0x1
+  Entry point address:               0x74b
+  Start of program headers:          64 (bytes into file)
+  Start of section headers:          6632 (bytes into file)
+  Flags:                             0x0
+  Size of this header:               64 (bytes)
+  Size of program headers:           56 (bytes)
+  Number of program headers:         9
+  Size of section headers:           64 (bytes)
+  Number of section headers:         29
+  Section header string table index: 28
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;入口地址顺利修改成功，再次执行二进制文件，输出：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;This is an alternative entry point to the program (stage: 1)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;参考&#34;&gt;&lt;a class=&#34;anchor&#34; href=&#34;#参考&#34;&gt;#&lt;/a&gt; 参考&lt;/h2&gt;
+&lt;p&gt;&lt;span class=&#34;exturl&#34; data-url=&#34;aHR0cDovL2NodXF1YW4ubWUvMjAxOC8wNS8yMS9lbGYtaW50cm9kdWNlLw==&#34;&gt;http://chuquan.me/2018/05/21/elf-introduce/&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;exturl&#34; data-url=&#34;aHR0cHM6Ly9yZWZzcGVjcy5saW51eGZvdW5kYXRpb24ub3JnL2VsZi9nYWJpNCsvY2g0LmVoZWFkZXIuaHRtbA==&#34;&gt;https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;exturl&#34; data-url=&#34;aHR0cHM6Ly9wYXBlci5zZWVidWcub3JnLzg5Lw==&#34;&gt;https://paper.seebug.org/89/&lt;/span&gt;&lt;/p&gt;
+</content>
+        <category term="C" scheme="https://fguby.love/categories/C/" />
+        <category term="ELF" scheme="https://fguby.love/categories/C/ELF/" />
+        <category term="hotpatch" scheme="https://fguby.love/tags/hotpatch/" />
+        <updated>2021-01-24T03:29:25.000Z</updated>
+    </entry>
+    <entry>
         <id>https://fguby.love/hotpatch-1/</id>
-        <title>热补丁之旅（一）</title>
+        <title>热补丁之旅（一）开胃小菜</title>
         <link rel="alternate" href="https://fguby.love/hotpatch-1/"/>
         <content type="html">&lt;p&gt;如何在进程不停止的情况下进行某些函数的替换呢？&lt;/p&gt;
 &lt;p&gt;&lt;a id=&#34;more&#34;&gt;&lt;/a&gt;&lt;/p&gt;
