@@ -110,6 +110,7 @@ var render = anime({
   }
 });
 
+
 document.addEventListener(tap, function(e) {
   render.play();
   updateCoords(e);

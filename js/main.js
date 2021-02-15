@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const $searchEle = document.querySelector('#search-button')
   let searchWidth = $searchEle && $searchEle.offsetWidth
 
+  InitButton()
   const adjustMenu = (change = false) => {
     if (change) {
       blogNameWidth = $blogName && $blogName.offsetWidth
@@ -482,6 +483,45 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+
+  $(document).on('pjax:complete', function() {
+      InitButton();
+  })
+
+  function InitButton() {
+    let nowMode = document.documentElement.getAttribute('data-theme')
+    if (nowMode != "dark") {
+        document.getElementById("card-info-btn").className = "button button-glow button-rounded button-raised button-primary"
+    } else {
+        document.getElementById("card-info-btn").className = "button button-glow button-rounded button-raised button-inverse"
+    }
+  }
+
+  function bookmarksite(title,url) { 
+    // Internet Explorer
+    if(document.all)
+    {
+        window.external.AddFavorite(url, title); 
+    }
+    // Google Chrome
+    else if(window.chrome){
+       alert("谷歌浏览器请使用Ctrl+D添加书签");
+    }
+    // Firefox
+    else if (window.sidebar)
+    {
+        window.sidebar.addPanel(title, url, ""); 
+    }
+    // Opera
+    else if(window.opera && window.print)
+    {
+       var elem = document.createElement('a'); 
+       elem.setAttribute('href',url); 
+       elem.setAttribute('title',title); 
+       elem.setAttribute('rel','sidebar'); 
+       elem.click(); 
+    }
+ } 
   /**
  * Rightside
  */
@@ -552,6 +592,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  document.getElementById('card-info-btn').addEventListener('click', function(e) {
+    bookmarksite(window.location.href, "我妻善逸")
+  })
+
   document.getElementById('rightside').addEventListener('click', function (e) {
     const $target = e.target.id || e.target.parentNode.id
     switch ($target) {
@@ -580,6 +624,8 @@ document.addEventListener('DOMContentLoaded', function () {
         break
     }
   })
+
+  
 
   /**
  * menu

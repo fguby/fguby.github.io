@@ -59,7 +59,7 @@
   isHome: false,
   isHighlightShrink: false,
   isToc: false,
-  postUpdate: '2021-02-15 20:38:02'
+  postUpdate: '2021-02-16 00:42:50'
 }</script><noscript><style type="text/css">
   #nav {
     opacity: 1
@@ -118,12 +118,14 @@
   
       win.activateDarkMode = function () {
         document.documentElement.setAttribute('data-theme', 'dark')
+        document.getElementById("card-info-btn").className = "button button-glow button-rounded button-raised button-inverse"
         if (document.querySelector('meta[name="theme-color"]') !== null) {
           document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
         }
       }
       win.activateLightMode = function () {
         document.documentElement.setAttribute('data-theme', 'light')
+        document.getElementById("card-info-btn").className = "button button-glow button-rounded button-raised button-primary"
         if (document.querySelector('meta[name="theme-color"]') !== null) {
           document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
         }
