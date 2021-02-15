@@ -1,0 +1,553 @@
+<!DOCTYPE html><html class="hide-aside" lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>热补丁之旅（二）ELF研究 | Midoriya</title><meta name="keywords" content="C,ELF"><meta name="author" content="我妻善逸"><meta name="copyright" content="我妻善逸"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="要想反编译一个Linux二进制文件或者实现热补丁的原理，那么不可避免地，首先就需要理解二进制格式本身">
+<meta property="og:type" content="article">
+<meta property="og:title" content="热补丁之旅（二）ELF研究">
+<meta property="og:url" content="https://www.midoriya.com/2021/01/24/hotpatch-2/index.html">
+<meta property="og:site_name" content="Midoriya">
+<meta property="og:description" content="要想反编译一个Linux二进制文件或者实现热补丁的原理，那么不可避免地，首先就需要理解二进制格式本身">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tva3.sinaimg.cn/mw690/6833939bly1giciszlczyj20zk0m816d.jpg">
+<meta property="article:published_time" content="2021-01-24T03:29:25.000Z">
+<meta property="article:modified_time" content="2021-02-15T07:15:31.294Z">
+<meta property="article:author" content="我妻善逸">
+<meta property="article:tag" content="C">
+<meta property="article:tag" content="ELF">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tva3.sinaimg.cn/mw690/6833939bly1giciszlczyj20zk0m816d.jpg"><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://www.midoriya.com/2021/01/24/hotpatch-2/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="google-site-verification" content="srTvd_4Vi9f8nD1l19q8GmTyChjsy9SUpegkWhwJGfQ"/><meta name="baidu-site-verification" content="v79APO63YVt4LZeS"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/instantsearch.js@2.10.5/dist/instantsearch.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/instantsearch.js@2.10.5/dist/instantsearch.min.js" defer></script><script async="async" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script><script>(adsbygoogle = window.adsbygoogle || []).push({
+  google_ad_client: '',
+  enable_page_level_ads: 'true'
+});</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome/css/font-awesome.min.css">
+<script src="/live2d/autoload.js"></script><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: {"appId":"G8HNN7SYG4","apiKey":"1612c1728f64e8f373754bc7f642699b","indexName":"fguby","hits":{"per_page":6},"languages":{"input_placeholder":"搜索文章","hits_empty":"找不到您查询的内容：${query}","hits_stats":"找到 ${hits} 条结果，用时 ${time} 毫秒"}},
+  localSearch: undefined,
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"簡"},
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: 我妻善逸","link":"链接: ","source":"来源: Midoriya","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-right"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: true,
+  islazyload: true,
+  isanchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-02-15 15:15:31'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const fontSizeVal = saveToLocal.get('global-font-size')
+    if (fontSizeVal !== undefined) {
+      document.documentElement.style.setProperty('--global-font-size', fontSizeVal + 'px')
+    }
+    })(window)</script><link rel="stylesheet" href="/css/loading_wizard.css"/><link rel="stylesheet" href="/css/my.css"><meta name="generator" content="Hexo 5.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="wizard-scene"><div class="wizard-objects"><div class="wizard-square"></div><div class="wizard-circle"></div><div class="wizard-triangle"></div></div><div class="wizard"><div class="wizard-body"></div><div class="wizard-right-arm"><div class="wizard-right-hand"></div></div><div class="wizard-left-arm"><div class="wizard-left-hand"></div></div><div class="wizard-head"><div class="wizard-beard"></div><div class="wizard-face"><div class="wizard-adds"></div></div><div class="wizard-hat"><div class="wizard-hat-of-the-hat"></div><div class="wizard-four-point-star --first"></div><div class="wizard-four-point-star --second"></div><div class="wizard-four-point-star --third"></div></div></div></div></div></div><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" data-lazy-src="/img/avatar.jpg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">9</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">9</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标籤</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://tva3.sinaimg.cn/mw690/6833939bly1giciszlczyj20zk0m816d.jpg')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Midoriya</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标籤</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">热补丁之旅（二）ELF研究</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-01-24T03:29:25.000Z" title="发表于 2021-01-24 11:29:25">2021-01-24</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-02-15T07:15:31.294Z" title="更新于 2021-02-15 15:15:31">2021-02-15</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E7%83%AD%E8%A1%A5%E4%B8%81/">热补丁</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">3.1k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>11分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>一个ELF文件由4部分组成</p>
+<ol>
+<li>ELF头 （ELF header）</li>
+<li>程序头表 （Program header table）</li>
+<li>节 （Section）</li>
+<li>节头表 （Section header table）</li>
+</ol>
+<h2 id="文件类型"><a href="#文件类型" class="headerlink" title="文件类型"></a>文件类型</h2><p>一个ELF文件可以分为以下几种类型 （由e_type的值决定）</p>
+<ol>
+<li><p>ET_NOTE </p>
+<p>未知类型，表明文件类型不确定，或者还未定义</p>
+</li>
+<li><p>ET_REL </p>
+<p>重定位文件，意味着这个文件里标记了一段可重定位的代码，也就是编译后的.o文件</p>
+</li>
+<li><p>ET_EXEC</p>
+<p>可执行文件，就是通常所说的二进制文件。</p>
+</li>
+<li><p>ET_DYN</p>
+<p>共享目标文件，一个动态的可链接的目标文件，也称为共享库，也就是so文件</p>
+</li>
+<li><p>ET_CORE</p>
+<p>核心文件，在程序崩溃或者进程传递了一个SIGSEGV信号时，会在核心文件中记录整个进程的镜像信息</p>
+</li>
+</ol>
+<h2 id="ELF-header"><a href="#ELF-header" class="headerlink" title="ELF header"></a>ELF header</h2><p>程序头是对二进制文件中段的描述，是程序装载所必需的一部分。段是在内核装载时被解析的，描述了磁盘上可执行文件的内存布局以及如何映射到内存中。</p>
+<p>64位可执行文件程序头结构如下：（每个字段的详细值都可以从该节末的链接中查看）</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">  <span class="keyword">unsigned</span> <span class="keyword">char</span>	e_ident[EI_NIDENT];	<span class="comment">/* Magic number and other info */</span></span><br><span class="line">  Elf64_Half	e_type;			<span class="comment">/* Object file type */</span></span><br><span class="line">  Elf64_Half	e_machine;		<span class="comment">/* Architecture */</span></span><br><span class="line">  Elf64_Word	e_version;		<span class="comment">/* Object file version */</span></span><br><span class="line">  Elf64_Addr	e_entry;		<span class="comment">/* Entry point virtual address */</span></span><br><span class="line">  Elf64_Off	e_phoff;		<span class="comment">/* Program header table file offset */</span></span><br><span class="line">  Elf64_Off	e_shoff;		<span class="comment">/* Section header table file offset */</span></span><br><span class="line">  Elf64_Word	e_flags;		<span class="comment">/* Processor-specific flags */</span></span><br><span class="line">  Elf64_Half	e_ehsize;		<span class="comment">/* ELF header size in bytes */</span></span><br><span class="line">  Elf64_Half	e_phentsize;		<span class="comment">/* Program header table entry size */</span></span><br><span class="line">  Elf64_Half	e_phnum;		<span class="comment">/* Program header table entry count */</span></span><br><span class="line">  Elf64_Half	e_shentsize;		<span class="comment">/* Section header table entry size */</span></span><br><span class="line">  Elf64_Half	e_shnum;		<span class="comment">/* Section header table entry count */</span></span><br><span class="line">  Elf64_Half	e_shstrndx;		<span class="comment">/* Section header string table index */</span></span><br><span class="line">&#125; Elf64_Ehdr;</span><br></pre></td></tr></table></figure>
+<p>第一个字段<code>e_ident</code>是一个16字节的数组，用于标识文件。<code>e_ident</code>的前4个字节（即文件本身的前4个字节）是序列（0x7f, ‘E’, ‘L’, ‘F’)，用来将文件标记为ELF文件</p>
+<p><code>e_type</code> 目标文件类型，主要值：</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ET_NOTE</td>
+<td>0</td>
+<td>未知类型</td>
+</tr>
+<tr>
+<td>ET_REL</td>
+<td>1</td>
+<td>可重定位文件</td>
+</tr>
+<tr>
+<td>ET_EXEC</td>
+<td>2</td>
+<td>可执行的二进制文件</td>
+</tr>
+<tr>
+<td>ET_DYN</td>
+<td>3</td>
+<td>动态库so文件</td>
+</tr>
+<tr>
+<td>ET_CORE</td>
+<td>4</td>
+<td>core文件</td>
+</tr>
+</tbody></table>
+<p><code>e_machine</code>标明了该二进制文件的编译平台，例如<code>0x3e</code>代表AMD x86-64的架构</p>
+<p>可以从文末的链接中查看每个字段的详细信息。</p>
+<h3 id="重要属性"><a href="#重要属性" class="headerlink" title="重要属性"></a>重要属性</h3><p>有几个比较重要的属性需要提前注意一下，后面写代码时会用到：</p>
+<ol>
+<li><p>e_phoff</p>
+<p>segment的头部偏移</p>
+</li>
+<li><p>e_phentsize</p>
+<p>segment的头部大小</p>
+</li>
+<li><p>e_phnum</p>
+<p>segment的头部数量</p>
+</li>
+<li><p>e_shoff</p>
+<p>section的头部偏移</p>
+</li>
+<li><p>e_shentsize</p>
+<p>section的头部大小</p>
+</li>
+<li><p>e_shnum</p>
+<p>section的头部数量</p>
+</li>
+</ol>
+<h3 id="关于e-shstrndx"><a href="#关于e-shstrndx" class="headerlink" title="关于e_shstrndx"></a>关于<code>e_shstrndx</code></h3><p>ELF文件中的每个section都是有名字的，比如.data、.text，每个名字其实都是一个字符串，既然是字符串就需要一个字符串池来保存，而这个字符串池其实也是一个section。这个特殊的字符串池叫.shstrtab。</p>
+<p>前面的示例图中其实也能够看到，所有section的头部都是连续存放在一起的，类似于一个数组，而这个e_shsrtndx变量就是.shstrtab这个节在这个数组中的下标。</p>
+<h2 id="Program-headers"><a href="#Program-headers" class="headerlink" title="Program headers"></a>Program headers</h2><p>程序头是对二进制文件中段的描述，是程序装载必需的一部分。段（segment）是在内核装载时被解析的，描述了磁盘上可执行文件的内存布局以及如何映射到内存中，可以通过引用原始ELF头中<code>e_phoff</code>的偏移量来得到程序头表。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">elf64_phdr</span> &#123;</span></span><br><span class="line">    Elf64_Word p_type;</span><br><span class="line">    Elf64_Word p_flags;</span><br><span class="line">    Elf64_Off p_offset; <span class="comment">/* Segment file offset */</span></span><br><span class="line">    Elf64_Addr p_vaddr; <span class="comment">/* Segment virtual address */</span></span><br><span class="line">    Elf64_Addr p_paddr; <span class="comment">/* Segment physical address */</span></span><br><span class="line">    Elf64_Xword p_filesz;   <span class="comment">/* Segment size in file */</span></span><br><span class="line">    Elf64_Xword p_memsz;    <span class="comment">/* Segment size in memory */</span></span><br><span class="line">    Elf64_Xword p_align;    <span class="comment">/* Segment alignment, file &amp; memory */</span></span><br><span class="line">  &#125; Elf64_Phdr;</span><br></pre></td></tr></table></figure>
+
+
+<p>根据<code>p_type</code>的值，可以判断段的类型，从<code>elf.h</code>头文件中可以看到段的类型比较多</p>
+<figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span>	PT_NULL		0		/* Program header table entry unused */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_LOAD		1		/* Loadable program segment */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_DYNAMIC	2		/* Dynamic linking information */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_INTERP	3		/* Program interpreter */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_NOTE		4		/* Auxiliary information */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_SHLIB	5		/* Reserved */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_PHDR		6		/* Entry for header table itself */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_TLS		7		/* Thread-local storage segment */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span>	PT_NUM		8		/* Number of defined types */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_LOOS		0x60000000	/* Start of OS-specific */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_GNU_EH_FRAME	0x6474e550	/* GCC .eh_frame_hdr segment */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_GNU_STACK	0x6474e551	/* Indicates stack executability */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_GNU_RELRO	0x6474e552	/* Read-only after relocation */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_LOSUNW	0x6ffffffa</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_SUNWBSS	0x6ffffffa	/* Sun Specific segment */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_SUNWSTACK	0x6ffffffb	/* Stack segment */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_HISUNW	0x6fffffff</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_HIOS		0x6fffffff	/* End of OS-specific */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_LOPROC	0x70000000	/* Start of processor-specific */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PT_HIPROC	0x7fffffff	/* End of processor-specific */</span></span><br></pre></td></tr></table></figure>
+
+
+<p>这里介绍一些比较重要的段。</p>
+<h3 id="PT-LOAD"><a href="#PT-LOAD" class="headerlink" title="PT_LOAD"></a>PT_LOAD</h3><p>一个ELF文件至少有一个PT_LOAD类型的段，这类程序头描述的是可装载的段，也就是说，这种类型的段将被装载或者映射到内存中。</p>
+<p>例如，一个需要动态链接的ELF可执行文件通常会包含以下两个可以装载的段（类型为PT_LOAD)</p>
+<ol>
+<li>存放程序代码的text段</li>
+<li>存放全局变量和动态链接信息的data段</li>
+</ol>
+<p>text段也就是经常说的代码段，该段的权限一般设置为PT_X | PT_R ，0x05</p>
+<p>data段也就是数据段，权限一般设置为PT_W  | PT_R （读和写）0x06</p>
+<p>这里要注意的是，text段和data段都是<code>PT_LOAD</code>类型的段，判断段究竟是<code>text</code>段还是<code>data</code>段还需要取<code>p_offset</code>的值。</p>
+<p><code>p_offset</code>等于0的<code>PT_LOAD</code>类型的段才是text段。</p>
+<h3 id="PT-DYNAMIC"><a href="#PT-DYNAMIC" class="headerlink" title="PT_DYNAMIC"></a>PT_DYNAMIC</h3><p>动态段是动态链接可执行文件所特有的，包含了动态链接器所必需的一些信息。</p>
+<ol>
+<li>运行时需要链接的共享库列表</li>
+<li>全局偏移表（GOT）的地址</li>
+<li>重定位的相关信息</li>
+</ol>
+<h3 id="PT-NOTE"><a href="#PT-NOTE" class="headerlink" title="PT_NOTE"></a>PT_NOTE</h3><p>该类型的段可能保存了与系统相关的附加信息，在可执行文件实际运行时是不需要这个段的。</p>
+<h3 id="PT-INTERP"><a href="#PT-INTERP" class="headerlink" title="PT_INTERP"></a>PT_INTERP</h3><p>该段只将位置和大小信息存放在一个以null为终止符的字符串中，是对程序解释器位置的描述。</p>
+<p>例如，<code>/lib/ld-linx.so.2</code>一般是指动态链接器的位置，也即程序解释器的位置。</p>
+<h3 id="PT-PHDR"><a href="#PT-PHDR" class="headerlink" title="PT_PHDR"></a>PT_PHDR</h3><p>该段保存了程序头表的本身的位置和大小，保存了所有的Phdr对文件中段的描述信息。</p>
+<h2 id="Section-header"><a href="#Section-header" class="headerlink" title="Section header"></a>Section header</h2><p>在每个段中，会有代码和数据被划分为不同的节。节头表是对这些节的位置和大小的描述，主要用于链接和调试。</p>
+<h3 id="text节"><a href="#text节" class="headerlink" title=".text节"></a>.text节</h3><p>存放编译好的二进制可执行代码，如果存在Phdr，.text节就会存在于.text段中，由于.text节保存了程序代码，因此节的类型为<code>SHT_PROGBITS</code></p>
+<h3 id="rodata节"><a href="#rodata节" class="headerlink" title=".rodata节"></a>.rodata节</h3><p>保存只读的数据，例如字符串常量、const的变量，只能在text段中找到.rodata节</p>
+<h3 id="plt节"><a href="#plt节" class="headerlink" title=".plt节"></a>.plt节</h3><p>包含了动态链接器调用从共享库导入的函数所必需的相关代码</p>
+<h3 id="data节"><a href="#data节" class="headerlink" title=".data节"></a>.data节</h3><p>.data节存在于data段中，保存了初始化的全局变量等数据</p>
+<h3 id="bss节"><a href="#bss节" class="headerlink" title=".bss节"></a>.bss节</h3><p>保存了未进行初始化的全局变量，是data段的一部分，占用空间不超过4字节，仅表示这个节本身的空间。</p>
+<h3 id="symtab"><a href="#symtab" class="headerlink" title=".symtab"></a>.symtab</h3><p>符号表，记录的则是函数和变量</p>
+<h3 id="strtab"><a href="#strtab" class="headerlink" title=".strtab"></a>.strtab</h3><p>字符串表、字符串常量和变量名</p>
+<h3 id="got-plt节"><a href="#got-plt节" class="headerlink" title=".got.plt节"></a>.got.plt节</h3><p>.got节保存了全局偏移表，.got节和.plt节一起提供了对导入的共享库函数的访问入口，由动态链接器在运行时进行修改。</p>
+<h3 id="dynsym节"><a href="#dynsym节" class="headerlink" title=".dynsym节"></a>.dynsym节</h3><p>保存了从共享库导入的动态符号信息，该节保存在text段中，节类型被标记为SHT_DYNSYM</p>
+<p>一个<code>text</code>段的布局如下：</p>
+<ul>
+<li>[.text] 程序代码</li>
+<li>[.rodata] 只读数据</li>
+<li>[.hash] 符号散列表</li>
+<li>[.dynsym] 共享目标文件符号数据</li>
+<li>[.dynstr] 共享目录文件符号名称</li>
+<li>[.plt] 过程链接表</li>
+<li>[.rel.got] G.O.T重定位数据</li>
+</ul>
+<h2 id="ELF符号"><a href="#ELF符号" class="headerlink" title="ELF符号"></a>ELF符号</h2><p>符号是对某些类型的数据或者代码（如全局变量和函数）的符号引用。</p>
+<p>例如，printf()函数会在动态符号表.dynsym中存有一个指向该函数的符号条目。</p>
+<p>在大多数共享库和动态链接可执行文件中，存在两个符号表：<code>.dynsym</code>和<code>.symtab</code>。</p>
+<p>.dynsym保存了引用来自外部文件符号的全局符号，如printf这样的库函数，.dynsym保存的符号是.symtab所保存符号的子集，.symtab中还保存了可执行文件的本地符号，如全局变量或者代码中定义的本地函数。</p>
+<p>因此，.symtab保存了所有的符号，而.dynsym只保存动态/全局符号。</p>
+<p>使用<code>readelf -S main</code>查看二进制文件的节头，这里我删去一些暂时无用的节</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[Nr] Name              Type             Address           Offset</span><br><span class="line">       Size              EntSize          Flags  Link  Info  Align</span><br><span class="line"></span><br><span class="line">  [ 5] .dynsym           DYNSYM           00000000000002b8  000002b8</span><br><span class="line">       00000000000000f0  0000000000000018   A       6     1     8</span><br><span class="line"></span><br><span class="line">  [26] .symtab           SYMTAB           0000000000000000  00001040</span><br><span class="line">       0000000000000660  0000000000000018          27    43     8</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>从打印出来的信息中可以看到一部分节的Flags被标记为了A（ALLOC）、WA（WRITE/ALLOC）或者AX（ALLOC/EXC）</p>
+<p>.dynsym被标记了A（ALLOC），而.symtab则没有被标记</p>
+<p><code>ALLOC</code>表示有该标记的节会在运行时分配并装载进入内存，而.symtab不是在运行时必需的，因此不会被装载到内存中。.dynsym保存的符号只能在运行时被解析，因此是运行时动态链接器所需要的唯一符号。</p>
+<p><code>.dynsym</code>符号表对于动态链接可执行文件的执行来说是必需的</p>
+<p>一个64位ELF文件符号项的结构</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    <span class="keyword">uint32_t</span>      st_name;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> st_info;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> st_other;</span><br><span class="line">    <span class="keyword">uint16_t</span>      st_shndx;</span><br><span class="line">    Elf64_Addr    st_value;</span><br><span class="line">    Uint64_t      st_size;</span><br><span class="line">&#125; Elf64_sym;</span><br></pre></td></tr></table></figure>
+<ol>
+<li><p>st_name</p>
+<p>保存了指向符号表中字符串表（位于.dynstr或者.strtab）的偏移地址，偏移地址存放着符号的名称，如printf</p>
+</li>
+<li><p>st_value</p>
+<p>存放符号的值（可能是地址或者位置偏移量）</p>
+</li>
+<li><p>st_size</p>
+<p>存放了一个符号的大小</p>
+</li>
+<li><p>st_shndx</p>
+<p>每个符号表条目的定义都与某些节对应，该变量保存了相关节头表的索引</p>
+</li>
+<li><p>st_info</p>
+<p>符号类型</p>
+</li>
+</ol>
+<h3 id="查看符号表条目"><a href="#查看符号表条目" class="headerlink" title="查看符号表条目"></a>查看符号表条目</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">readelf -s 二进制文件 # 注意是小写的s</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+<h2 id="修改ELF文件的入口"><a href="#修改ELF文件的入口" class="headerlink" title="修改ELF文件的入口"></a>修改ELF文件的入口</h2><p>好了，去掉那些长篇大论的废话，学习还是要从实践开始入手。</p>
+<p>如果你对结构还有不清楚的地方，可以自行去谷歌学习一下，在这里我引用一张别的博客所画的结构图，文末有博客链接。</p>
+<p><img src= "/img/loading.gif" data-lazy-src="/img/elf-file-format.png" alt="avatar"></p>
+<p>先从一个简单的功能开始，修改一个ELF文件的入口地址。</p>
+<p>一段示例代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> stage = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">__attribute__((constructor))</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">initializer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    stage += <span class="number">1</span>;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;initializer function (stage: %d) \n&quot;</span>, stage);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">__attribute__((destructor))</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">finalizer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    stage += <span class="number">1</span>;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;finalizer function (stage: %d) \n&quot;</span>, stage);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</span><br><span class="line">    stage += <span class="number">1</span>;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;main function (stage: %d) \n&quot;</span>, stage);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">alternativeEntryPoint</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    stage += <span class="number">1</span>;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;This is an alternative entry point to the program (stage: %d) \n&quot;</span>, stage);</span><br><span class="line">    <span class="built_in">exit</span>(<span class="number">0</span>);</span><br><span class="line">&#125;</span><br><span class="line">   </span><br></pre></td></tr></table></figure>
+
+
+<p>正常编译后的打印应该如下：</p>
+<blockquote>
+<p>initializer function (stage: 1)<br>main function (stage: 2)<br>finalizer function (stage: 3) </p>
+</blockquote>
+<p>现在来修改一下这个二进制文件，将它的入口函数修改为<code>alternativeEntryPoint</code></p>
+<p>首先，找一下<code>alternativeEntryPoint</code>函数的地址</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">readelf -s test | grep alternativeEntryPoint</span><br></pre></td></tr></table></figure>
+<p>得到</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">54: 000000000000074b    54 FUNC    GLOBAL DEFAULT   14 alternativeEntryPoint</span><br></pre></td></tr></table></figure>
+<p>ok，可以看到<code>alternativeEntryPoint</code>函数的入口地址是<code>0x74b</code></p>
+<p>然后，修改代码如下</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/mman.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;elf.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">stat</span> <span class="title">st</span>;</span></span><br><span class="line">    Elf64_Ehdr *ehdr;</span><br><span class="line"></span><br><span class="line">    fd = open(<span class="string">&quot;test&quot;</span>, O_RDWR|O_CREAT, <span class="number">00777</span>);</span><br><span class="line">    <span class="keyword">if</span> (fd &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        perror(<span class="string">&quot;open fail&quot;</span>);</span><br><span class="line">        <span class="built_in">exit</span>(<span class="number">-1</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (fstat(fd, &amp;st) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        perror(<span class="string">&quot;fstat fail&quot;</span>);</span><br><span class="line">        <span class="built_in">exit</span>(<span class="number">-1</span>);       </span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 建立内存映射</span></span><br><span class="line">    <span class="keyword">char</span> *mem = mmap(<span class="literal">NULL</span>, st.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span> (mem == MAP_FAILED) &#123;</span><br><span class="line">        perror(<span class="string">&quot;mmap failed&quot;</span>);</span><br><span class="line">        <span class="built_in">exit</span>(<span class="number">-1</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ehdr = (Elf64_Ehdr *)mem;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;old entry: %lx&quot;</span>, ehdr-&gt;e_entry);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 在这里将入口修改为0x74b</span></span><br><span class="line">    ehdr-&gt;e_entry = <span class="number">0x74b</span>;</span><br><span class="line">    close(fd);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<p>编译修改代码=&gt;执行，应该会打印出原本ELF文件的入口地址。</p>
+<p>这时候，再用<code>readelf</code>命令查看一下二进制文件：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">readelf -h test</span><br></pre></td></tr></table></figure>
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">ELF Header:</span><br><span class="line">  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00 </span><br><span class="line">  Class:                             ELF64</span><br><span class="line">  Data:                              2&#39;s complement, little endian</span><br><span class="line">  Version:                           1 (current)</span><br><span class="line">  OS&#x2F;ABI:                            UNIX - System V</span><br><span class="line">  ABI Version:                       0</span><br><span class="line">  Type:                              DYN (Shared object file)</span><br><span class="line">  Machine:                           Advanced Micro Devices X86-64</span><br><span class="line">  Version:                           0x1</span><br><span class="line">  Entry point address:               0x74b</span><br><span class="line">  Start of program headers:          64 (bytes into file)</span><br><span class="line">  Start of section headers:          6632 (bytes into file)</span><br><span class="line">  Flags:                             0x0</span><br><span class="line">  Size of this header:               64 (bytes)</span><br><span class="line">  Size of program headers:           56 (bytes)</span><br><span class="line">  Number of program headers:         9</span><br><span class="line">  Size of section headers:           64 (bytes)</span><br><span class="line">  Number of section headers:         29</span><br><span class="line">  Section header string table index: 28</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+<p>入口地址顺利修改成功，再次执行二进制文件，输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">This is an alternative entry point to the program (stage: 1)</span><br></pre></td></tr></table></figure>
+
+
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="http://chuquan.me/2018/05/21/elf-introduce/">http://chuquan.me/2018/05/21/elf-introduce/</a></p>
+<p><a target="_blank" rel="noopener" href="https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html">https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://paper.seebug.org/89/">https://paper.seebug.org/89/</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">我妻善逸</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://www.midoriya.com/2021/01/24/hotpatch-2/">https://www.midoriya.com/2021/01/24/hotpatch-2/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://www.midoriya.com" target="_blank">Midoriya</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/C/">C</a><a class="post-meta__tags" href="/tags/ELF/">ELF</a></div><div class="post_share"><div class="social-share" data-image="https://tva3.sinaimg.cn/mw690/6833939bly1giciszlczyj20zk0m816d.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button button--animated"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechatpay.png" target="_blank"><img class="post-qr-code-img" data-lazy-src="/img/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/alipay.png" target="_blank"><img class="post-qr-code-img" data-lazy-src="/img/alipay.png" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2021/01/30/hotpatch-3/"><img class="prev-cover" data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1gicis3attqj20zk0m8k7l.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">热补丁之旅（三）从byte里看ELF</div></div></a></div><div class="next-post pull-right"><a href="/2021/01/23/hotpatch-1/"><img class="next-cover" data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1gicit31ffoj20zk0m8naf.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">热补丁之旅（一）开胃小菜</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2021/01/30/hotpatch-3/" title="热补丁之旅（三）从byte里看ELF"><img class="cover" data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1gicis3attqj20zk0m8k7l.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-01-30</div><div class="title">热补丁之旅（三）从byte里看ELF</div></div></a></div><div><a href="/2021/01/23/hotpatch-1/" title="热补丁之旅（一）开胃小菜"><img class="cover" data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1gicit31ffoj20zk0m8naf.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-01-23</div><div class="title">热补丁之旅（一）开胃小菜</div></div></a></div><div><a href="/2021/02/11/hotpatch-4/" title="热补丁之旅（四）实现一个ELF解析器"><img class="cover" data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1gicis081o9j20zk0m8dmr.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-02-11</div><div class="title">热补丁之旅（四）实现一个ELF解析器</div></div></a></div><div><a href="/2021/02/14/hotpatch-5/" title="热补丁之旅（五）Ptrace"><img class="cover" data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1gipeu1usa7j20zk0m8b29.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-02-14</div><div class="title">热补丁之旅（五）Ptrace</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div><div id="comment-switch"><span class="first-comment">Valine</span><span class="switch-btn"></span><span class="second-comment">Disqus</span></div></div><div class="comment-wrap"><div><div class="vcomment" id="vcomment"></div></div><div><div id="disqus_thread"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="card-info-avatar is-center"><img class="avatar-img" data-lazy-src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">我妻善逸</div><div class="author-info__description">懒、宅、二次元、萝莉控</div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">9</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">9</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/fguby"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/fguby" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:fguby1995@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%87%E4%BB%B6%E7%B1%BB%E5%9E%8B"><span class="toc-number">1.</span> <span class="toc-text">文件类型</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ELF-header"><span class="toc-number">2.</span> <span class="toc-text">ELF header</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8D%E8%A6%81%E5%B1%9E%E6%80%A7"><span class="toc-number">2.1.</span> <span class="toc-text">重要属性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%B3%E4%BA%8Ee-shstrndx"><span class="toc-number">2.2.</span> <span class="toc-text">关于e_shstrndx</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Program-headers"><span class="toc-number">3.</span> <span class="toc-text">Program headers</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#PT-LOAD"><span class="toc-number">3.1.</span> <span class="toc-text">PT_LOAD</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PT-DYNAMIC"><span class="toc-number">3.2.</span> <span class="toc-text">PT_DYNAMIC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PT-NOTE"><span class="toc-number">3.3.</span> <span class="toc-text">PT_NOTE</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PT-INTERP"><span class="toc-number">3.4.</span> <span class="toc-text">PT_INTERP</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PT-PHDR"><span class="toc-number">3.5.</span> <span class="toc-text">PT_PHDR</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Section-header"><span class="toc-number">4.</span> <span class="toc-text">Section header</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#text%E8%8A%82"><span class="toc-number">4.1.</span> <span class="toc-text">.text节</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#rodata%E8%8A%82"><span class="toc-number">4.2.</span> <span class="toc-text">.rodata节</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#plt%E8%8A%82"><span class="toc-number">4.3.</span> <span class="toc-text">.plt节</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#data%E8%8A%82"><span class="toc-number">4.4.</span> <span class="toc-text">.data节</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#bss%E8%8A%82"><span class="toc-number">4.5.</span> <span class="toc-text">.bss节</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#symtab"><span class="toc-number">4.6.</span> <span class="toc-text">.symtab</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#strtab"><span class="toc-number">4.7.</span> <span class="toc-text">.strtab</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#got-plt%E8%8A%82"><span class="toc-number">4.8.</span> <span class="toc-text">.got.plt节</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#dynsym%E8%8A%82"><span class="toc-number">4.9.</span> <span class="toc-text">.dynsym节</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ELF%E7%AC%A6%E5%8F%B7"><span class="toc-number">5.</span> <span class="toc-text">ELF符号</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9F%A5%E7%9C%8B%E7%AC%A6%E5%8F%B7%E8%A1%A8%E6%9D%A1%E7%9B%AE"><span class="toc-number">5.1.</span> <span class="toc-text">查看符号表条目</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BF%AE%E6%94%B9ELF%E6%96%87%E4%BB%B6%E7%9A%84%E5%85%A5%E5%8F%A3"><span class="toc-number">6.</span> <span class="toc-text">修改ELF文件的入口</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">7.</span> <span class="toc-text">参考</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2021/02/14/hotpatch-5/" title="热补丁之旅（五）Ptrace"><img data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1gipeu1usa7j20zk0m8b29.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="热补丁之旅（五）Ptrace"/></a><div class="content"><a class="title" href="/2021/02/14/hotpatch-5/" title="热补丁之旅（五）Ptrace">热补丁之旅（五）Ptrace</a><time datetime="2021-02-14T14:29:25.000Z" title="发表于 2021-02-14 22:29:25">2021-02-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/02/11/hotpatch-4/" title="热补丁之旅（四）实现一个ELF解析器"><img data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1gicis081o9j20zk0m8dmr.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="热补丁之旅（四）实现一个ELF解析器"/></a><div class="content"><a class="title" href="/2021/02/11/hotpatch-4/" title="热补丁之旅（四）实现一个ELF解析器">热补丁之旅（四）实现一个ELF解析器</a><time datetime="2021-02-11T14:29:25.000Z" title="发表于 2021-02-11 22:29:25">2021-02-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/01/30/hotpatch-3/" title="热补丁之旅（三）从byte里看ELF"><img data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1gicis3attqj20zk0m8k7l.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="热补丁之旅（三）从byte里看ELF"/></a><div class="content"><a class="title" href="/2021/01/30/hotpatch-3/" title="热补丁之旅（三）从byte里看ELF">热补丁之旅（三）从byte里看ELF</a><time datetime="2021-01-30T14:29:25.000Z" title="发表于 2021-01-30 22:29:25">2021-01-30</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/01/24/hotpatch-2/" title="热补丁之旅（二）ELF研究"><img data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1giciszlczyj20zk0m816d.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="热补丁之旅（二）ELF研究"/></a><div class="content"><a class="title" href="/2021/01/24/hotpatch-2/" title="热补丁之旅（二）ELF研究">热补丁之旅（二）ELF研究</a><time datetime="2021-01-24T03:29:25.000Z" title="发表于 2021-01-24 11:29:25">2021-01-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/01/23/hotpatch-1/" title="热补丁之旅（一）开胃小菜"><img data-lazy-src="https://tva3.sinaimg.cn/mw690/6833939bly1gicit31ffoj20zk0m8naf.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="热补丁之旅（一）开胃小菜"/></a><div class="content"><a class="title" href="/2021/01/23/hotpatch-1/" title="热补丁之旅（一）开胃小菜">热补丁之旅（一）开胃小菜</a><time datetime="2021-01-23T13:29:25.000Z" title="发表于 2021-01-23 21:29:25">2021-01-23</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2019 - 2021 By 我妻善逸</div><div id="workboard"></div><script async="async" src="/js/custom/runtime.js"></script><div class="footer_custom_text"><img class="icp-icon entered loading" alt="ICP" src="https://cdn.jsdelivr.net/gh/sviptzk/StaticFile_HEXO@0c02ff8/butterfly/img/icp.png" data-ll-status="loading"><a target="_blank" rel="noopener" href="https://icp.chinaz.com/home/info?host=midoriya.co">京ICP备19030277号</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="font-plus" type="button" title="放大字体"><i class="fas fa-plus"></i></button><button id="font-minus" type="button" title="缩小字体"><i class="fas fa-minus"></i></button><button id="translateLink" type="button" title="简繁转换">繁</button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="algolia-search"><div class="search-dialog"><div class="search-dialog__title" id="algolia-search-title">Algolia</div><div id="algolia-input-panel"><div id="algolia-search-input"></div></div><hr/><div id="algolia-search-results"><div id="algolia-hits"></div><div id="algolia-pagination"></div><div id="algolia-stats"></div></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/algolia.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',preloader.endLoading())</script><div class="js-pjax"><script>function loadValine () {
+  function initValine () {
+    let initData = {
+      el: '#vcomment',
+      appId: 'ueDj39puLOUOGw37ih9OyAiB-MdYXbMMI',
+      appKey: 'UbNBidayFrjifnW8fnPPDvHq',
+      placeholder: 'ヽ(○´∀`)ﾉ♪',
+      avatar: 'monsterid',
+      meta: 'nick,mail,link'.split(','),
+      pageSize: '10',
+      lang: 'en',
+      recordIP: false,
+      serverURLs: '',
+      emojiCDN: '',
+      emojiMaps: "",
+      enableQQ: false,
+      path: window.location.pathname,
+    }
+
+    if (true) { 
+      initData.requiredFields= ('nick,mail'.split(','))
+    }
+    
+    if (false) {
+      const otherData = false
+      initData = Object.assign(initData, otherData)
+    }
+    
+    const valine = new Valine(initData)
+  }
+
+  if (typeof Valine === 'function') initValine() 
+  else getScript('https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js').then(initValine)
+}
+
+if ('Valine' === 'Valine' || !true) {
+  if (true) btf.loadComment(document.getElementById('vcomment'),loadValine)
+  else setTimeout(loadValine, 0)
+} else {
+  function loadOtherComment () {
+    loadValine()
+  }
+}</script><script>function loadDisqus () {
+  var disqus_config = function () {
+    this.page.url = 'https://www.midoriya.com/2021/01/24/hotpatch-2/'
+    this.page.identifier = '2021/01/24/hotpatch-2/'
+    this.page.title = '热补丁之旅（二）ELF研究'
+  };
+
+  window.disqusReset = () => {
+    DISQUS.reset({
+      reload: true,
+      config: disqus_config
+    })
+  }
+
+  if (window.DISQUS) disqusReset()
+  else {
+    (function() { 
+      var d = document, s = d.createElement('script');
+      s.src = 'https://.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', +new Date());
+      (d.head || d.body).appendChild(s);
+    })();
+  }
+}
+
+if ('Valine' === 'Disqus' || !true) {
+  if (true) btf.loadComment(document.getElementById('disqus_thread'), loadDisqus)
+  else loadDisqus()
+} else {
+  function loadOtherComment () {
+    loadDisqus()
+  }
+}
+</script></div><script src="https://cdn.jsdelivr.net/npm/animejs@3.2.0/lib/anime.min.js"></script><script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.js"></script><canvas class="fireworks" mobile="true"></canvas><script src="/js/custom/firework.js"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-fluttering-ribbon.min.js"></script><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = true;
+POWERMODE.mobile = true;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>let pjaxSelectors = [
+  'title',
+  '#config-diff',
+  '#body-wrap',
+  '#rightside-config-hide',
+  '#rightside-config-show',
+  '.js-pjax'
+]
+
+if (false) {
+  pjaxSelectors.unshift('meta[property="og:image"]', 'meta[property="og:title"]', 'meta[property="og:url"]')
+}
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof chatBtnFn === 'function' && chatBtnFn()
+  typeof panguInit === 'function' && panguInit()
+
+  if (typeof gtag === 'function') {
+    gtag('config', '', {'page_path': window.location.pathname});
+  }
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // Analytics
+  if (false) {
+    MtaH5.pgv()
+  }
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+
+  typeof preloader === 'object' && preloader.endLoading()
+})
+
+
+document.addEventListener('pjax:send', function () {
+  typeof preloader === 'object' && preloader.initLoading()
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+})
+
+document.addEventListener('pjax:error', (e) => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
