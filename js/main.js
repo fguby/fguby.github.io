@@ -497,31 +497,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function bookmarksite(title,url) { 
-    // Internet Explorer
-    if(document.all)
-    {
-        window.external.AddFavorite(url, title); 
-    }
-    // Google Chrome
-    else if(window.chrome){
-       alert("谷歌浏览器请使用Ctrl+D添加书签");
-    }
-    // Firefox
-    else if (window.sidebar)
-    {
-        window.sidebar.addPanel(title, url, ""); 
-    }
-    // Opera
-    else if(window.opera && window.print)
-    {
-       var elem = document.createElement('a'); 
-       elem.setAttribute('href',url); 
-       elem.setAttribute('title',title); 
-       elem.setAttribute('rel','sidebar'); 
-       elem.click(); 
-    }
- } 
   /**
  * Rightside
  */
@@ -591,10 +566,6 @@ document.addEventListener('DOMContentLoaded', function () {
       // document.getElementById('font-text').innerText = newValue
     }
   }
-
-  document.getElementById('card-info-btn').addEventListener('click', function(e) {
-    bookmarksite(window.location.href, "我妻善逸")
-  })
 
   document.getElementById('rightside').addEventListener('click', function (e) {
     const $target = e.target.id || e.target.parentNode.id
