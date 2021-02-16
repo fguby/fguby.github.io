@@ -37,8 +37,25 @@ svg.icon {
      overflow: hidden;
 }
 
+@font-face{
+  font-family: 'SetoFont';
+  src : url('/assets/fonts/SetoFont-1.ttf');
+}
 
+@font-face{
+  font-family: 'paopao';
+  src : url('/assets/fonts/paopao.ttf');
+}
 
+.tag-cloud-list {
+  font-family: 'paopao';
+  font-size: 20px;
+}
+
+.card-tag-cloud {
+  font-family: 'paopao';
+  font-size: 20px;
+}
 
 /*! @license
 *
