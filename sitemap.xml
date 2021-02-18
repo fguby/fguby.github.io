@@ -2,6 +2,34 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.midoriya.com/hotpatch-6/</loc>
+    
+    <lastmod>2021-02-18</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://www.midoriya.com/hotpatch-5/</loc>
+    
+    <lastmod>2021-02-18</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://www.midoriya.com/hotpatch-3/</loc>
+    
+    <lastmod>2021-02-18</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://www.midoriya.com/hotpatch-4/</loc>
+    
+    <lastmod>2021-02-18</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.midoriya.com/beautify-blog/</loc>
     
     <lastmod>2021-02-15</lastmod>
@@ -44,20 +72,6 @@
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/hotpatch-5/</loc>
-    
-    <lastmod>2021-02-15</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>https://www.midoriya.com/hotpatch-3/</loc>
-    
-    <lastmod>2021-02-15</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>https://www.midoriya.com/go-gc/</loc>
     
     <lastmod>2021-02-15</lastmod>
@@ -78,17 +92,10 @@
     
   </url>
   
-  <url>
-    <loc>https://www.midoriya.com/hotpatch-4/</loc>
-    
-    <lastmod>2021-02-15</lastmod>
-    
-  </url>
-  
 
   <url>
     <loc>https://www.midoriya.com/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -96,63 +103,63 @@
   
   <url>
     <loc>https://www.midoriya.com/tags/Scheduler/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://www.midoriya.com/tags/%E7%BE%8E%E5%8C%96/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://www.midoriya.com/tags/GC/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://www.midoriya.com/tags/C/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://www.midoriya.com/tags/Inter-Pin/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://www.midoriya.com/tags/ELF/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://www.midoriya.com/tags/Byte/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://www.midoriya.com/tags/Go/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://www.midoriya.com/tags/Ptrace/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
@@ -161,21 +168,21 @@
   
   <url>
     <loc>https://www.midoriya.com/categories/Golang/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://www.midoriya.com/categories/%E7%BE%8E%E5%8C%96%E6%95%99%E7%A8%8B/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://www.midoriya.com/categories/%E7%83%AD%E8%A1%A5%E4%B8%81/</loc>
-    <lastmod>2021-02-16</lastmod>
+    <lastmod>2021-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
