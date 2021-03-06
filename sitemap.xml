@@ -172,7 +172,7 @@
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/golang/</loc>
+    <loc>https://www.midoriya.com/tags/%E5%BC%80%E6%BA%90%E4%BB%A3%E7%A0%81%E9%98%85%E8%AF%BB/</loc>
     <lastmod>2021-03-06</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -210,13 +210,6 @@
   
   <url>
     <loc>https://www.midoriya.com/categories/%E7%83%AD%E8%A1%A5%E4%B8%81/</loc>
-    <lastmod>2021-03-06</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://www.midoriya.com/categories/%E5%BC%80%E6%BA%90/</loc>
     <lastmod>2021-03-06</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
