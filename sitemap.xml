@@ -116,14 +116,14 @@
 
   
   <url>
-    <loc>https://www.midoriya.com/tags/Scheduler/</loc>
+    <loc>https://www.midoriya.com/tags/%E7%BE%8E%E5%8C%96/</loc>
     <lastmod>2022-01-06</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/%E7%BE%8E%E5%8C%96/</loc>
+    <loc>https://www.midoriya.com/tags/Scheduler/</loc>
     <lastmod>2022-01-06</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -179,6 +179,13 @@
   </url>
   
   <url>
+    <loc>https://www.midoriya.com/tags/Ptrace/</loc>
+    <lastmod>2022-01-06</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://www.midoriya.com/tags/%E5%BC%80%E6%BA%90%E4%BB%A3%E7%A0%81%E9%98%85%E8%AF%BB/</loc>
     <lastmod>2022-01-06</lastmod>
     <changefreq>daily</changefreq>
@@ -199,24 +206,17 @@
     <priority>0.6</priority>
   </url>
   
-  <url>
-    <loc>https://www.midoriya.com/tags/Ptrace/</loc>
-    <lastmod>2022-01-06</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
 
   
   <url>
-    <loc>https://www.midoriya.com/categories/Golang/</loc>
+    <loc>https://www.midoriya.com/categories/%E7%BE%8E%E5%8C%96%E6%95%99%E7%A8%8B/</loc>
     <lastmod>2022-01-06</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/categories/%E7%BE%8E%E5%8C%96%E6%95%99%E7%A8%8B/</loc>
+    <loc>https://www.midoriya.com/categories/Golang/</loc>
     <lastmod>2022-01-06</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
