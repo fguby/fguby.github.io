@@ -3417,6 +3417,9 @@ li.categoryBar-list-item:nth-child(2) {
 li.categoryBar-list-item:nth-child(3) {
   background: url('https://cdn.jsdelivr.net/gh/Akilarlxh/Akilarlxh.github.io@v3.3.3_2/img/cover6.webp');
 }
+li.categoryBar-list-item:nth-child(4) {
+  background: url('https://cdn.jsdelivr.net/gh/Akilarlxh/Akilarlxh.github.io@v3.3.3_2/img/cover2.webp');
+}
 li.categoryBar-list-item:nth-child(1)>span::after {
   content: '从零开始学习go语言' !important;
 }
@@ -3425,6 +3428,9 @@ li.categoryBar-list-item:nth-child(2)>span::after {
 }
 li.categoryBar-list-item:nth-child(3)>span::after {
   content: '如何美化IDE、操作系统、博客...' !important;
+}
+li.categoryBar-list-item:nth-child(4)>span::after {
+  content: '一些好用的软件、类库' !important;
 }
 li.categoryBar-list-item {
   width: 32.3% !important;
