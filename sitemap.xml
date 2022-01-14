@@ -144,14 +144,14 @@
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/%E7%BE%8E%E5%8C%96/</loc>
+    <loc>https://www.midoriya.com/tags/GC/</loc>
     <lastmod>2022-01-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/GC/</loc>
+    <loc>https://www.midoriya.com/tags/%E7%BE%8E%E5%8C%96/</loc>
     <lastmod>2022-01-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -172,13 +172,6 @@
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/Inter-Pin/</loc>
-    <lastmod>2022-01-14</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://www.midoriya.com/tags/ELF/</loc>
     <lastmod>2022-01-14</lastmod>
     <changefreq>daily</changefreq>
@@ -186,7 +179,7 @@
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/Byte/</loc>
+    <loc>https://www.midoriya.com/tags/Inter-Pin/</loc>
     <lastmod>2022-01-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -201,6 +194,13 @@
   
   <url>
     <loc>https://www.midoriya.com/tags/Ptrace/</loc>
+    <lastmod>2022-01-14</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://www.midoriya.com/tags/Byte/</loc>
     <lastmod>2022-01-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
