@@ -158,14 +158,14 @@
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/golang/</loc>
+    <loc>https://www.midoriya.com/tags/GC/</loc>
     <lastmod>2022-01-16</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/GC/</loc>
+    <loc>https://www.midoriya.com/tags/golang/</loc>
     <lastmod>2022-01-16</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
