@@ -2,6 +2,20 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.midoriya.com/movies/index.html</loc>
+    
+    <lastmod>2022-01-17</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://www.midoriya.com/music/index.html</loc>
+    
+    <lastmod>2022-01-17</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.midoriya.com/awesome/</loc>
     
     <lastmod>2022-01-17</lastmod>
@@ -186,14 +200,14 @@
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/ELF/</loc>
+    <loc>https://www.midoriya.com/tags/Inter-Pin/</loc>
     <lastmod>2022-01-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/Byte/</loc>
+    <loc>https://www.midoriya.com/tags/ELF/</loc>
     <lastmod>2022-01-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -207,7 +221,7 @@
   </url>
   
   <url>
-    <loc>https://www.midoriya.com/tags/Inter-Pin/</loc>
+    <loc>https://www.midoriya.com/tags/Byte/</loc>
     <lastmod>2022-01-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
